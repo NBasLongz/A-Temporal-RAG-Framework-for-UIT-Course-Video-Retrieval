@@ -50,9 +50,7 @@ class ASREngine:
             logging.error(f"Lỗi khi chạy ASR: {e}")
             return None
 
-# =======================================================
-# TEST NHANH
-# =======================================================
+
 if __name__ == "__main__":
     asr = ASREngine(output_dir="../../data/transcripts")
     # Thay bằng đường dẫn file wav sinh ra từ video_processor.py

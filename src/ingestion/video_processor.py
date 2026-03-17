@@ -106,9 +106,7 @@ class VideoProcessor:
             "frames_metadata": frames_info
         }
 
-# =======================================================
-# KHỐI LỆNH TEST (Sẽ chỉ chạy khi bạn chạy trực tiếp file này)
-# =======================================================
+
 if __name__ == "__main__":
     # Khai báo đường dẫn giả định (Bạn cần có 1 file test_video.mp4 trong data/raw_videos/)
     TEST_VIDEO = "../../data/raw_videos/test_video.mp4" 

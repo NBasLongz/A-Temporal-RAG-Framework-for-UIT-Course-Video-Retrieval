@@ -66,9 +66,7 @@ class OCREngine:
         logging.info(f"Đã lưu kết quả OCR tại: {output_file}")
         return output_file
 
-# =======================================================
-# TEST NHANH
-# =======================================================
+
 if __name__ == "__main__":
     ocr_engine = OCREngine(output_dir="../../data/transcripts")
     
