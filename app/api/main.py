@@ -40,6 +40,15 @@ app.include_router(videos.router)
 app.include_router(mindmap.router)
 app.include_router(transcript.router)
 
+# ==================== Serve Video Files ====================
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+VIDEOS_DIR = PROJECT_ROOT / "data" / "raw_videos"
+
+# Mount video files trước frontend (để /videos/ path không bị frontend override)
+if VIDEOS_DIR.exists():
+    app.mount("/videos", StaticFiles(directory=str(VIDEOS_DIR)), name="videos")
+
 # ==================== Serve Frontend Static Files ====================
 
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
@@ -53,3 +62,4 @@ async def serve_index():
 
 # Mount static files (CSS, JS, assets)
 app.mount("/", StaticFiles(directory=str(FRONTEND_DIR)), name="frontend")
+

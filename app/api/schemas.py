@@ -35,6 +35,7 @@ class Video(BaseModel):
     duration: str
     completed: bool = False
     active: bool = False
+    filename: str = ""  # Tên file video trong data/raw_videos/
 
 
 class Chapter(BaseModel):

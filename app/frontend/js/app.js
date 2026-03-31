@@ -25,7 +25,7 @@ function renderChapters(chapters, playerRef) {
             <div class="chapter-header">
                 <div class="flex items-center gap-3">
                     <div class="w-8 h-8 rounded-lg bg-[var(--bg-elevated)] flex items-center justify-center text-sm font-bold text-[var(--accent)]">
-                        0${chapter.id}
+                        ${String(chapter.id).padStart(2, '0')}
                     </div>
                     <div>
                         <h3 class="font-medium text-[15px]">${chapter.title}</h3>
@@ -40,7 +40,7 @@ function renderChapters(chapters, playerRef) {
                 ${chapter.videos
                     .map(
                         (video) => `
-                    <div class="video-item ${video.active ? 'active' : ''} ${video.completed ? 'completed' : ''}" data-video-id="${video.id}">
+                    <div class="video-item ${video.active ? 'active' : ''} ${video.completed ? 'completed' : ''}" data-video-id="${video.id}" data-filename="${video.filename || ''}">
                         <div class="video-thumb-icon w-9 h-9 rounded-lg ${
                             video.completed
                                 ? 'bg-[var(--success)]'
@@ -78,7 +78,7 @@ function renderChapters(chapters, playerRef) {
         });
     });
 
-    // Video selection
+    // Video selection — click để chuyển video
     document.querySelectorAll('.video-item').forEach((item) => {
         item.addEventListener('click', () => {
             document.querySelectorAll('.video-item').forEach((v) => v.classList.remove('active'));
@@ -86,11 +86,22 @@ function renderChapters(chapters, playerRef) {
 
             const videoId = parseInt(item.dataset.videoId, 10);
             const videoTitle = item.querySelector('h4').textContent;
+            const filename = item.dataset.filename;
 
-            // Cập nhật UI
+            // Cập nhật UI info
             document.getElementById('videoTitle').textContent = videoTitle;
             document.getElementById('mindmapVideoTitle').textContent = videoTitle;
             setCurrentVideoId(videoId);
+
+            // ★ Đổi nguồn video player ★
+            if (filename && playerRef) {
+                const video = playerRef.getVideo();
+                const encodedFilename = encodeURIComponent(filename);
+                video.src = `/videos/${encodedFilename}`;
+                video.load();
+                video.play().catch(() => {}); // Auto-play, bỏ qua lỗi autoplay policy
+                console.log(`[VideoLearn] Playing: ${filename}`);
+            }
         });
     });
 }
@@ -118,6 +129,15 @@ async function initApp() {
         const chapters = await apiClient.fetchChapters();
         renderChapters(chapters, playerRef);
         console.log(`[VideoLearn] Loaded ${chapters.length} chapters`);
+
+        // 5. Load video đầu tiên
+        const firstVideo = chapters[0]?.videos[0];
+        if (firstVideo?.filename) {
+            const video = playerRef.getVideo();
+            video.src = `/videos/${encodeURIComponent(firstVideo.filename)}`;
+            video.load();
+            document.getElementById('videoTitle').textContent = firstVideo.title;
+        }
     } catch (error) {
         console.error('[VideoLearn] Failed to load chapters:', error);
         document.getElementById('chapterList').innerHTML = `
