@@ -118,7 +118,7 @@ function showTypingIndicator() {
 
 /**
  * Hiển thị related videos/sources từ RAG.
- * @param {Array<{video_title: string, timestamp: string, content_snippet: string}>} sources
+ * @param {Array<{video_title: string, timestamp: string, filename: string, content_snippet: string}>} sources
  */
 function renderRelatedVideos(sources) {
     if (!sources || sources.length === 0) return;
@@ -130,7 +130,7 @@ function renderRelatedVideos(sources) {
     list.innerHTML = sources
         .map(
             (source) => `
-        <div class="video-suggestion group flex items-start gap-3 p-2.5 hover:bg-[var(--bg-elevated)] rounded-xl cursor-pointer transition-colors border border-transparent hover:border-[var(--border)]" data-timestamp="${source.timestamp}">
+        <div class="video-suggestion group flex items-start gap-3 p-2.5 hover:bg-[var(--bg-elevated)] rounded-xl cursor-pointer transition-colors border border-transparent hover:border-[var(--border)]" data-timestamp="${source.timestamp}" data-filename="${escapeHtml(source.filename || '')}">
             <div class="w-7 h-7 rounded-lg flex items-center justify-center bg-[var(--accent-dim)] text-[var(--accent)] mt-0.5 flex-shrink-0">
                 <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
                     <polygon points="5 3 19 12 5 21 5 3"></polygon>
@@ -147,49 +147,66 @@ function renderRelatedVideos(sources) {
         )
         .join('');
 
-    // Click vào source → tìm video tương ứng, load file và seek tới đúng timestamp
+    // Click vào source → tìm video tương ứng bằng filename, load file và seek tới đúng timestamp
     list.querySelectorAll('.video-suggestion').forEach((el) => {
         el.addEventListener('click', () => {
             const timeStr = el.dataset.timestamp;
+            const targetFilename = el.dataset.filename;
+            
+            if (!timeStr || !targetFilename) {
+                console.warn('[Chat] Missing timestamp or filename in video source');
+                return;
+            }
+            
             const [mins, secs] = timeStr.split(':').map(Number);
             const seconds = mins * 60 + (secs || 0);
-            
-            const h4 = el.querySelector('h4');
-            const targetVideoTitle = h4 ? h4.textContent.trim() : "";
 
-            if (videoPlayer) {
-                const currentVideoTitle = document.getElementById('videoTitle').textContent.trim();
+            if (!videoPlayer) {
+                console.warn('[Chat] Video player not initialized');
+                return;
+            }
 
-                // Nếu là video khác, phải chuyển video trước khi seek
-                if (targetVideoTitle && currentVideoTitle !== targetVideoTitle) {
-                    const videoItems = document.querySelectorAll('.video-item');
-                    let foundItem = null;
-                    for (const item of videoItems) {
-                        const titleEl = item.querySelector('h4');
-                        if (titleEl && titleEl.textContent.trim() === targetVideoTitle) {
-                            foundItem = item;
-                            break;
-                        }
-                    }
+            const videoItems = document.querySelectorAll('.video-item');
+            let foundItem = null;
 
-                    if (foundItem) {
-                        foundItem.click(); // Đổi video (trigger event bên app.js)
-                        
-                        // Chờ video load metadata rồi mới seek
-                        const video = videoPlayer.getVideo();
-                        const onLoadedMetaData = () => {
-                            video.currentTime = seconds;
-                            video.play().catch(() => {});
-                            video.removeEventListener('loadedmetadata', onLoadedMetaData);
-                        };
-                        video.addEventListener('loadedmetadata', onLoadedMetaData);
-                        return;
-                    }
+            // Tìm video item khớp với filename
+            for (const item of videoItems) {
+                const itemFilename = item.dataset.filename;
+                if (itemFilename && itemFilename === targetFilename) {
+                    foundItem = item;
+                    break;
                 }
-                
-                // Nếu đang mở đúng video đó, chỉ cần seek tới giây
-                videoPlayer.seekTo(seconds);
-                videoPlayer.getVideo().play().catch(() => {});
+            }
+
+            if (!foundItem) {
+                console.warn(`[Chat] Video not found in playlist: ${targetFilename}`);
+                // Optional: Show error to user
+                // alert(`Không tìm thấy video: "${targetFilename}"`);
+                return;
+            }
+
+            // Chuyển sang video mới (trigger event bên app.js)
+            foundItem.click();
+
+            // Chờ video load metadata rồi mới seek
+            const video = videoPlayer.getVideo();
+            
+            // Nếu video đã load sẵn metadata, seek ngay lập tức
+            if (video.readyState >= 1) { // HAVE_METADATA hoặc cao hơn
+                video.currentTime = seconds;
+                video.play().catch(() => {
+                    console.warn('[Chat] Auto-play bị chặn bởi browser policy');
+                });
+            } else {
+                // Nếu chưa load, đợi loadedmetadata event
+                const onLoadedMetaData = () => {
+                    video.currentTime = seconds;
+                    video.play().catch(() => {
+                        console.warn('[Chat] Auto-play bị chặn bởi browser policy');
+                    });
+                    video.removeEventListener('loadedmetadata', onLoadedMetaData);
+                };
+                video.addEventListener('loadedmetadata', onLoadedMetaData);
             }
         });
     });

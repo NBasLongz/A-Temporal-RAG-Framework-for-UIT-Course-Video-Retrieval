@@ -20,6 +20,8 @@ class Source(BaseModel):
     video_title: str
     timestamp: str
     content_snippet: str
+    filename: str = ""  # Tên file video để match với video item
+    video_id: Optional[int] = None  # ID video để match nhanh hơn
 
 
 class ChatResponse(BaseModel):

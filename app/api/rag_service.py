@@ -136,9 +136,13 @@ class RagService:
                         if len(parts) == 2:
                             formatted_title = parts[1].strip().replace('_', ':')
 
+                    # Tác file là video_name + .mp4
+                    filename = v_name + ".mp4" if not v_name.endswith(".mp4") else v_name
+
                     related_vids.append({
-                        "video_id": v_name + ".mp4", # Giả định video name khớp file .mp4
+                        "video_id": v_name + ".mp4",  # Giả định video name khớp file .mp4
                         "title": formatted_title,
+                        "filename": filename,  # Thêm filename để frontend xác định video
                         "timestamp": ts,
                         "relevance_score": 0.99  # Mock score or mapping from RRF 
                     })
