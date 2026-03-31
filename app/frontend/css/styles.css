@@ -1,0 +1,453 @@
+/* ====================================================
+   VideoLearn — Styles
+   Design System: Dark-first, with light mode toggle
+   ==================================================== */
+
+/* ==================== CSS Variables ==================== */
+:root {
+    /* DARK THEME (Mặc định) */
+    --bg-primary: #0a0f1a;
+    --bg-secondary: #111827;
+    --bg-card: #1a2234;
+    --bg-elevated: #232d42;
+    --fg-primary: #f1f5f9;
+    --fg-secondary: #94a3b8;
+    --fg-muted: #64748b;
+    --accent: #22d3ee;
+    --accent-dim: rgba(34, 211, 238, 0.15);
+    --accent-glow: rgba(34, 211, 238, 0.4);
+    --success: #10b981;
+    --warning: #f59e0b;
+    --border: #2a3548;
+    --gradient-start: #0ea5e9;
+    --gradient-end: #22d3ee;
+    --glow-opacity: 0.15;
+    --scrollbar-thumb: #334155;
+    --control-bg: rgba(255, 255, 255, 0.2);
+    --control-hover: rgba(255, 255, 255, 0.3);
+}
+
+/* LIGHT THEME */
+[data-theme="light"] {
+    --bg-primary: #f8fafc;
+    --bg-secondary: #ffffff;
+    --bg-card: #ffffff;
+    --bg-elevated: #f1f5f9;
+    --fg-primary: #0f172a;
+    --fg-secondary: #475569;
+    --fg-muted: #94a3b8;
+    --accent: #0284c7;
+    --accent-dim: rgba(2, 132, 199, 0.15);
+    --accent-glow: rgba(2, 132, 199, 0.3);
+    --border: #e2e8f0;
+    --gradient-start: #3b82f6;
+    --gradient-end: #0ea5e9;
+    --glow-opacity: 0.3;
+    --scrollbar-thumb: #cbd5e1;
+    --control-bg: rgba(255, 255, 255, 0.25);
+    --control-hover: rgba(255, 255, 255, 0.4);
+}
+
+/* ==================== Reset & Base ==================== */
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg-primary);
+    color: var(--fg-primary);
+    overflow: hidden;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Space Grotesk', sans-serif;
+}
+
+/* ==================== Scrollbar ==================== */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: var(--fg-muted);
+}
+
+/* ==================== Resizer ==================== */
+.resizer {
+    width: 6px;
+    cursor: col-resize;
+    background: transparent;
+    transition: background 0.2s ease;
+    position: relative;
+    flex-shrink: 0;
+    z-index: 20;
+}
+.resizer::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 2px;
+    height: 40px;
+    background: var(--border);
+    border-radius: 2px;
+    transition: all 0.2s ease;
+}
+.resizer:hover,
+.resizer.active {
+    background: var(--accent-dim);
+}
+.resizer:hover::after,
+.resizer.active::after {
+    background: var(--accent);
+    height: 60px;
+}
+
+/* ==================== Glow Blobs ==================== */
+.glow-blob {
+    position: fixed;
+    width: 600px;
+    height: 600px;
+    border-radius: 50%;
+    filter: blur(120px);
+    opacity: var(--glow-opacity);
+    pointer-events: none;
+    z-index: 0;
+    transition: opacity 0.5s ease;
+}
+.glow-blob-1 {
+    background: var(--gradient-start);
+    top: -200px;
+    left: -200px;
+}
+.glow-blob-2 {
+    background: var(--gradient-end);
+    bottom: -200px;
+    right: -200px;
+}
+
+/* ==================== Transitions ==================== */
+header, aside, .chapter-header, .chapter-content, .bg-\[var\(--bg-card\)\] {
+    transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+}
+
+/* Light mode enhancements */
+[data-theme="light"] .chapter-item,
+[data-theme="light"] .video-suggestion,
+[data-theme="light"] header {
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+}
+
+/* ==================== Video Player ==================== */
+.video-container {
+    position: relative;
+    background: #000;
+    border-radius: 12px;
+    overflow: hidden;
+    aspect-ratio: 16/9;
+    box-shadow: 0 10px 30px -10px rgba(0,0,0,0.3);
+}
+.video-container video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+.video-controls {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(transparent, rgba(0,0,0,0.9));
+    padding: 40px 16px 16px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    color: #ffffff;
+}
+.video-container:hover .video-controls {
+    opacity: 1;
+}
+.video-controls select option {
+    background-color: var(--bg-secondary);
+    color: var(--fg-primary);
+}
+
+/* ==================== Progress Bar ==================== */
+.progress-bar {
+    width: 100%;
+    height: 4px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 2px;
+    cursor: pointer;
+    position: relative;
+    margin-bottom: 12px;
+}
+.progress-bar:hover {
+    height: 6px;
+}
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--gradient-start), var(--gradient-end));
+    border-radius: 2px;
+    position: relative;
+    transition: width 0.1s linear;
+}
+.progress-fill::after {
+    content: '';
+    position: absolute;
+    right: -6px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 12px;
+    height: 12px;
+    background: var(--accent);
+    border-radius: 50%;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    box-shadow: 0 0 10px var(--accent-glow);
+}
+.progress-bar:hover .progress-fill::after {
+    opacity: 1;
+}
+
+/* ==================== Chapter Accordion ==================== */
+.chapter-item {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 8px;
+}
+.chapter-item:hover {
+    border-color: var(--accent-dim);
+}
+.chapter-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    background: var(--bg-card);
+    cursor: pointer;
+}
+.chapter-header:hover {
+    background: var(--bg-elevated);
+}
+.chapter-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s ease;
+    background: var(--bg-secondary);
+}
+.chapter-content.open {
+    max-height: 500px;
+}
+.chapter-chevron {
+    transition: transform 0.3s ease;
+}
+.chapter-item.open .chapter-chevron {
+    transform: rotate(180deg);
+}
+
+/* ==================== Video Item ==================== */
+.video-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-left: 3px solid transparent;
+}
+.video-item:hover {
+    background: var(--bg-elevated);
+}
+.video-item.active {
+    background: var(--accent-dim);
+    border-left-color: var(--accent);
+}
+.video-item.completed .video-thumb-icon {
+    background: var(--success);
+}
+
+/* ==================== Chat ==================== */
+.chat-message {
+    animation: messageSlide 0.3s ease;
+}
+@keyframes messageSlide {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ==================== Video Suggestion ==================== */
+.video-suggestion {
+    display: flex;
+    gap: 10px;
+    padding: 10px;
+    background: var(--bg-card);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+}
+.video-suggestion:hover {
+    background: var(--bg-elevated);
+    border-color: var(--accent);
+    transform: translateX(4px);
+}
+
+/* ==================== Modal ==================== */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+.modal-overlay.open {
+    opacity: 1;
+    visibility: visible;
+}
+.modal-content {
+    background: var(--bg-card);
+    border-radius: 16px;
+    max-width: 900px;
+    width: 90%;
+    max-height: 85vh;
+    overflow: hidden;
+    transform: scale(0.9) translateY(20px);
+    transition: transform 0.3s ease;
+    border: 1px solid var(--border);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+.modal-overlay.open .modal-content {
+    transform: scale(1) translateY(0);
+}
+
+/* ==================== Mindmap Tree ==================== */
+.mindmap-container {
+    padding: 24px;
+    overflow: auto;
+    max-height: 60vh;
+}
+.mindmap-node {
+    position: relative;
+    padding-left: 24px;
+}
+.mindmap-node::before {
+    content: '';
+    position: absolute;
+    left: 8px;
+    top: 12px;
+    width: 12px;
+    height: 2px;
+    background: var(--border);
+}
+.mindmap-node::after {
+    content: '';
+    position: absolute;
+    left: 8px;
+    top: 12px;
+    width: 2px;
+    height: calc(100% - 12px);
+    background: var(--border);
+}
+.mindmap-node:last-child::after {
+    display: none;
+}
+.mindmap-item {
+    padding: 10px 16px;
+    background: var(--bg-elevated);
+    border-radius: 8px;
+    margin-bottom: 8px;
+    border-left: 3px solid var(--accent);
+    transition: all 0.2s ease;
+}
+.mindmap-item:hover {
+    background: var(--bg-card);
+    transform: translateX(4px);
+}
+
+/* ==================== Buttons ==================== */
+.btn-primary {
+    background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+    color: #ffffff;
+    font-weight: 600;
+    padding: 12px 24px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px var(--accent-glow);
+}
+.btn-secondary {
+    background: var(--bg-elevated);
+    color: var(--fg-primary);
+    font-weight: 500;
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+.btn-secondary:hover {
+    background: var(--bg-card);
+    border-color: var(--accent);
+}
+
+/* ==================== Focus ==================== */
+*:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+/* ==================== Panels ==================== */
+.panel-left, .panel-right {
+    transition: width 0.3s ease, min-width 0.3s ease, max-width 0.3s ease;
+}
+
+/* ==================== Loading Animation ==================== */
+.loading-dots span {
+    animation: dotPulse 1.4s infinite ease-in-out both;
+}
+.loading-dots span:nth-child(1) { animation-delay: -0.32s; }
+.loading-dots span:nth-child(2) { animation-delay: -0.16s; }
+@keyframes dotPulse {
+    0%, 80%, 100% { opacity: 0.3; }
+    40% { opacity: 1; }
+}
+
+/* ==================== Fade-in Animations ==================== */
+.fade-in-up {
+    animation: fadeInUp 0.6s ease forwards;
+    opacity: 0;
+}
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.stagger-1 { animation-delay: 0.1s; }
+.stagger-2 { animation-delay: 0.2s; }
+.stagger-3 { animation-delay: 0.3s; }

@@ -1,0 +1,34 @@
+# ====== Core Dependencies ======
+torch
+transformers
+accelerate
+faster-whisper
+opencv-python
+scikit-image
+numpy
+Pillow
+
+# ====== LangChain Ecosystem ======
+langchain
+langchain-core
+langchain-community
+langchain-chroma
+langchain-huggingface
+langchain-google-genai
+
+# ====== Embedding & Retrieval ======
+sentence-transformers
+chromadb
+rank_bm25
+
+# ====== Data Processing ======
+pandas
+sqlalchemy
+
+# ====== Config ======
+pyyaml
+python-dotenv
+
+# ====== Web UI (REST API) ======
+fastapi
+uvicorn[standard]

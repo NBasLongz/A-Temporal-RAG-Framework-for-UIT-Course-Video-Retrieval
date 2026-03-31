@@ -1,0 +1,36 @@
+# ====== Model Configuration ======
+
+# ASR - Automatic Speech Recognition
+asr:
+  engine: "faster-whisper"
+  model_size: "large-v3"
+  language: "vi"
+  beam_size: 5
+  vad_filter: true
+  compute_type_cuda: "float16"
+  compute_type_cpu: "int8"
+
+# OCR - Optical Character Recognition
+ocr:
+  engine: "qwen2-vl"
+  model_id: "Qwen/Qwen2-VL-2B-Instruct"
+  prompt: "Trích xuất văn bản tiếng Việt."
+  max_new_tokens: 512
+
+# Embedding
+embedding:
+  model_name: "intfloat/multilingual-e5-large"
+  normalize_embeddings: true
+  passage_prefix: "passage: "
+  query_prefix: "query: "
+
+# LLM - Large Language Model (cho Refine, Query Rewrite, Generation)
+llm:
+  provider: "google"
+  model_name: "gemini-2.5-flash-lite"
+
+# Video Processing
+video:
+  frame_interval_sec: 20
+  ssim_threshold: 0.96
+  audio_sample_rate: 16000

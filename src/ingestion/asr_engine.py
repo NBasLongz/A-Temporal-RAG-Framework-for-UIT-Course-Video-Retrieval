@@ -2,50 +2,76 @@ import os
 import json
 import torch
 import logging
-from transformers import pipeline
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+
 
 class ASREngine:
     """
     Mô-đun ASR: Chuyển đổi âm thanh (.wav) thành văn bản (Transcript) kèm mốc thời gian.
+    Sử dụng faster-whisper (large-v3) — tối ưu cho nhận dạng tiếng Việt.
     """
-    def __init__(self, model_id="vinai/PhoWhisper-small", output_dir="data/transcripts"):
-        self.model_id = model_id
+
+    def __init__(self, model_size="large-v3", output_dir="data/transcripts"):
+        self.model_size = model_size
         self.output_dir = output_dir
         os.makedirs(self.output_dir, exist_ok=True)
-        
-        # Tự động nhận diện GPU nếu có, nếu không dùng CPU
-        self.device = "cuda:0" if torch.cuda.is_available() else "cpu"
-        logging.info(f"Đang tải mô hình ASR {self.model_id} trên {self.device}...")
-        
-        # Khởi tạo pipeline ASR
-        self.pipe = pipeline(
-            "automatic-speech-recognition", 
-            model=self.model_id, 
-            device=self.device
+
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.compute_type = "float16" if self.device == "cuda" else "int8"
+
+        logging.info(f"Đang tải mô hình ASR faster-whisper ({self.model_size}) trên {self.device}...")
+
+        from faster_whisper import WhisperModel
+        self.model = WhisperModel(
+            self.model_size,
+            device=self.device,
+            compute_type=self.compute_type
         )
 
-    def transcribe(self, audio_path: str) -> str:
-        """Thực hiện bóc băng âm thanh và lưu kết quả ra file JSON.
-
-        Trả về đường dẫn file JSON để có thể sử dụng trong pipeline (ví dụ: xây dựng index, truy vấn nội dung).
+    def transcribe(self, audio_path: str, video_name: str = None) -> str:
         """
-        logging.info(f"Đang bóc băng âm thanh: {audio_path}...")
-        base_name = os.path.splitext(os.path.basename(audio_path))[0]
-        
-        try:
-            # Chạy model với return_timestamps=True để lấy mốc thời gian cho từng đoạn
-            result = self.pipe(audio_path, return_timestamps=True)
-            
-            # Lưu kết quả ra file JSON
-            output_file = os.path.join(self.output_dir, f"{base_name}_audio.json")
-            with open(output_file, 'w', encoding='utf-8') as f:
-                json.dump(result, f, ensure_ascii=False, indent=4)
-                
-            logging.info(f"Đã lưu transcript âm thanh tại: {output_file}")
+        Thực hiện bóc băng âm thanh và lưu kết quả ra file JSON.
+        Output format: [{"start": float, "end": float, "text": str}, ...]
+
+        Returns:
+            Đường dẫn file JSON kết quả ASR.
+        """
+        if video_name is None:
+            video_name = os.path.splitext(os.path.basename(audio_path))[0]
+
+        output_file = os.path.join(self.output_dir, f"{video_name}_asr.json")
+
+        # Bỏ qua nếu đã xử lý
+        if os.path.exists(output_file):
+            logging.info(f"Đã có transcript cho '{video_name}', bỏ qua.")
             return output_file
-            
+
+        logging.info(f">>>> ĐANG ASR: {video_name}")
+
+        try:
+            segments, _ = self.model.transcribe(
+                audio_path,
+                language="vi",
+                beam_size=5,
+                vad_filter=True,
+            )
+
+            transcript_result = [
+                {
+                    "start": round(s.start, 2),
+                    "end": round(s.end, 2),
+                    "text": s.text.strip()
+                }
+                for s in segments
+            ]
+
+            with open(output_file, "w", encoding="utf-8") as f:
+                json.dump(transcript_result, f, ensure_ascii=False, indent=4)
+
+            logging.info(f"Đã lưu transcript ASR tại: {output_file}")
+            return output_file
+
         except Exception as e:
             logging.error(f"Lỗi khi chạy ASR: {e}")
             return None
@@ -53,6 +79,5 @@ class ASREngine:
 
 if __name__ == "__main__":
     asr = ASREngine(output_dir="../../data/transcripts")
-    # Thay bằng đường dẫn file wav sinh ra từ video_processor.py
-    # Ví dụ: dùng VideoProcessor.extract_audio() để tạo file .wav, sau đó chạy ASR.
-    # asr.transcribe("../../data/extracted_audio/test_video.wav")
+    # Ví dụ:
+    # asr.transcribe("../../data/extracted_audio/test_video.wav", "test_video")

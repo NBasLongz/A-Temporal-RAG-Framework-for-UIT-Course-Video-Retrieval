@@ -1,0 +1,18 @@
+# ====== Database Configuration ======
+
+# Vector Database (ChromaDB)
+vector_db:
+  persist_directory: "data/vector_store"
+  collection_name: "uit_lectures"
+
+# SQLite (Document Cache)
+sqlite:
+  db_path: "data/vector_store/documents.db"
+  table_name: "documents"
+
+# Data Paths
+paths:
+  raw_videos: "data/raw_videos"
+  extracted_audio: "data/extracted_audio"
+  extracted_frames: "data/extracted_frames"
+  transcripts: "data/transcripts"

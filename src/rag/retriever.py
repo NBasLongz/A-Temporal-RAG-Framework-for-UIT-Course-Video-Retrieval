@@ -1,87 +1,118 @@
 import logging
-from rank_bm25 import BM25Okapi
-from src.rag.vector_store import VectorStore
+from langchain_community.retrievers import BM25Retriever
+from src.rag.vector_db import VectorStore
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
+
 class HybridRetriever:
     """
-    Truy xuất hỗn hợp (Hybrid Search) sử dụng Vector Search (Dense) và BM25 (Sparse)
-    kết hợp bằng thuật toán Reciprocal Rank Fusion (RRF).
+    Truy xuất hỗn hợp (Hybrid Search):
+    - Dense Retrieval: Tìm kiếm ngữ nghĩa qua Chroma (Multilingual-E5).
+    - Sparse Retrieval: Tìm kiếm từ khóa qua BM25.
+    - Kết hợp bằng Reciprocal Rank Fusion (RRF).
+    - Hỗ trợ Query Rewrite bằng LLM.
     """
-    def __init__(self, vector_store: VectorStore):
+
+    def __init__(self, vector_store: VectorStore, documents: list = None, llm=None):
+        """
+        Args:
+            vector_store: VectorStore instance (LangChain Chroma).
+            documents: List[Document] — dùng để build BM25 index.
+            llm: LLM client để query rewrite. None = không rewrite.
+        """
         self.vector_store = vector_store
-        self.collection = vector_store.collection
-        
-        # Lấy toàn bộ document hiện có trong DB để build BM25 Index
-        all_docs = self.collection.get()
-        self.doc_ids = all_docs['ids']
-        self.documents = all_docs['documents']
-        self.metadatas = all_docs['metadatas']
-        
+        self.llm = llm
+
+        # Load documents cho BM25
+        if documents is None:
+            documents = vector_store.get_all_documents()
+
+        self.documents = documents
+
         if self.documents:
-            # Tokenize đơn giản (tách theo khoảng trắng) cho BM25
-            tokenized_corpus = [doc.lower().split() for doc in self.documents]
-            self.bm25 = BM25Okapi(tokenized_corpus)
+            self.bm25_retriever = BM25Retriever.from_documents(self.documents)
         else:
-            self.bm25 = None
+            self.bm25_retriever = None
 
-    def retrieve(self, query: str, top_k: int = 3) -> list:
+    def query_rewrite(self, query: str) -> str:
+        """
+        Viết lại câu truy vấn bằng LLM để tối ưu tìm kiếm.
+        """
+        if self.llm is None:
+            return query
+
+        from src.generation.prompts import get_query_rewrite_prompt
+
+        prompt = get_query_rewrite_prompt(query)
+        try:
+            refined_query = self.llm.invoke(prompt).content
+            logging.info(f"Query rewrite: '{query}' → '{refined_query}'")
+            return refined_query
+        except Exception as e:
+            logging.error(f"Lỗi query rewrite: {e}")
+            return query
+
+    def hybrid_search(self, query: str, k: int = 5) -> list:
+        """
+        Tìm kiếm hybrid: Semantic + BM25 + RRF.
+
+        Args:
+            query: Câu hỏi (đã rewrite hoặc chưa).
+            k: Số kết quả trả về.
+
+        Returns:
+            List[Document] — top-k documents theo điểm RRF.
+        """
         logging.info(f"Đang tìm kiếm cho câu hỏi: '{query}'")
-        
-        # 1. DENSE RETRIEVAL (Tìm kiếm ngữ nghĩa bằng E5)
-        # Nhớ thêm tiền tố "query: " theo chuẩn của E5 model
-        query_embedding = self.vector_store.embed_model.encode(f"query: {query}").tolist()
-        
-        dense_results = self.collection.query(
-            query_embeddings=[query_embedding],
-            n_results=top_k * 2 # Lấy dư ra để kết hợp RRF
-        )
-        
-        dense_hits = {}
-        if dense_results['ids']:
-            for rank, doc_id in enumerate(dense_results['ids']):
-                dense_hits[doc_id] = rank + 1 # Rank 1, 2, 3...
 
-        # 2. SPARSE RETRIEVAL (Tìm kiếm từ khóa bằng BM25)
-        sparse_hits = {}
-        if self.bm25:
-            tokenized_query = query.lower().split()
-            bm25_scores = self.bm25.get_scores(tokenized_query)
-            
-            # Sắp xếp điểm BM25 giảm dần và lấy top_k * 2
-            sorted_indices = sorted(range(len(bm25_scores)), key=lambda i: bm25_scores[i], reverse=True)[:top_k*2]
-            for rank, idx in enumerate(sorted_indices):
-                if bm25_scores[idx] > 0: # Chỉ lấy các doc có chứa từ khóa
-                    doc_id = self.doc_ids[idx]
-                    sparse_hits[doc_id] = rank + 1
+        # 1. SEMANTIC SEARCH (Dense)
+        semantic_results = self.vector_store.similarity_search(query=query, k=k * 2)
 
-        # 3. RECIPROCAL RANK FUSION (RRF) - Kết hợp 2 kết quả
+        # 2. BM25 SEARCH (Sparse)
+        bm25_results = []
+        if self.bm25_retriever:
+            self.bm25_retriever.k = k * 2
+            bm25_results = self.bm25_retriever.invoke(query)
+
+        # 3. RECIPROCAL RANK FUSION (RRF)
         rrf_scores = {}
-        k_const = 60 # Hằng số làm mịn chuẩn của RRF
-        
-        # Hợp nhất tất cả ID tài liệu tìm được
-        all_retrieved_ids = set(dense_hits.keys()) | set(sparse_hits.keys())
-        
-        for doc_id in all_retrieved_ids:
-            dense_rank = dense_hits.get(doc_id, 1000) # Nếu không có trong Dense, cho rank thấp (1000)
-            sparse_rank = sparse_hits.get(doc_id, 1000)
-            
-            # Công thức RRF
-            rrf_score = (1.0 / (k_const + dense_rank)) + (1.0 / (k_const + sparse_rank))
-            rrf_scores[doc_id] = rrf_score
-            
-        # Sắp xếp lại theo điểm RRF giảm dần
-        sorted_rrf = sorted(rrf_scores.items(), key=lambda x: x[10], reverse=True)[:top_k]
-        
-        # 4. TRẢ VỀ KẾT QUẢ CÙNG METADATA (ĐỂ HIỂN THỊ LÊN UI)
-        final_results = []
-        for doc_id, score in sorted_rrf:
-            idx = self.doc_ids.index(doc_id)
-            final_results.append({
-                "content": self.documents[idx],
-                "metadata": self.metadatas[idx],
-                "rrf_score": score
-            })
-            
+        k_const = 60  # Hằng số làm mịn chuẩn RRF
+
+        def add_results_to_rrf(results, weight=1.0):
+            for rank, doc in enumerate(results):
+                doc_id = doc.page_content  # Dùng nội dung làm key để deduplicate
+
+                if doc_id not in rrf_scores:
+                    rrf_scores[doc_id] = {"doc": doc, "score": 0.0}
+
+                rrf_scores[doc_id]["score"] += weight * (1.0 / (rank + 1 + k_const))
+
+        add_results_to_rrf(semantic_results)
+        add_results_to_rrf(bm25_results)
+
+        # Sắp xếp theo điểm RRF giảm dần
+        reranked_docs = sorted(
+            rrf_scores.values(), key=lambda x: x["score"], reverse=True
+        )
+
+        # Lấy Top K
+        final_results = [item["doc"] for item in reranked_docs[:k]]
         return final_results
+
+    def retrieve(self, query: str, top_k: int = 5, rewrite: bool = True) -> list:
+        """
+        Pipeline retrieval hoàn chỉnh: Query Rewrite → Hybrid Search.
+
+        Args:
+            query: Câu hỏi của người dùng.
+            top_k: Số kết quả trả về.
+            rewrite: Có viết lại query không.
+
+        Returns:
+            List[Document]
+        """
+        if rewrite:
+            query = self.query_rewrite(query)
+
+        return self.hybrid_search(query, k=top_k)

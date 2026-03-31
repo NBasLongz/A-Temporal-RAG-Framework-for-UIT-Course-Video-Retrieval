@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VideoLearn - Nền tảng học tập thông minh</title>
+    <meta name="description" content="Hệ thống RAG đa phương thức hỗ trợ truy vấn và tóm tắt nội dung bài giảng video UIT">
+
+    <!-- Tailwind CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Theme: prevent FOUC -->
+    <script>
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'light') {
+            document.documentElement.setAttribute('data-theme', 'light');
+        }
+    </script>
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="h-screen flex flex-col">
+    <!-- Glow Blobs -->
+    <div class="glow-blob glow-blob-1"></div>
+    <div class="glow-blob glow-blob-2"></div>
+
+    <!-- ==================== Header ==================== -->
+    <header id="appHeader" class="h-16 bg-[var(--bg-secondary)] border-b border-[var(--border)] flex items-center justify-between px-6 relative z-10 flex-shrink-0">
+        <div class="flex items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-[var(--gradient-start)] to-[var(--gradient-end)] flex items-center justify-center shadow-sm shadow-[var(--accent-glow)]">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-white">
+                        <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                    </svg>
+                </div>
+                <h1 class="text-xl font-bold tracking-tight">VideoLearn</h1>
+            </div>
+        </div>
+        <div class="flex items-center gap-4">
+            <!-- Search -->
+            <div class="relative hidden sm:block">
+                <input id="searchInput" type="text" placeholder="Tìm kiếm khoá học..." class="w-64 px-4 py-2.5 pl-10 bg-[var(--bg-card)] border border-[var(--border)] rounded-lg text-sm focus:border-[var(--accent)] transition-colors outline-none" />
+                <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--fg-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <path d="m21 21-4.35-4.35"></path>
+                </svg>
+            </div>
+
+            <!-- Streak -->
+            <div class="hidden md:flex items-center gap-2 px-3 py-2 bg-[var(--bg-card)] rounded-full border border-[var(--border)]">
+                <svg class="w-4 h-4 text-[var(--success)]" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                </svg>
+                <span class="text-sm font-medium">Streak: <span class="text-[var(--accent)]">7 ngày</span></span>
+            </div>
+
+            <!-- Theme Toggle -->
+            <button id="themeToggle" class="w-10 h-10 rounded-full bg-[var(--bg-elevated)] border border-[var(--border)] flex items-center justify-center text-[var(--fg-secondary)] hover:text-[var(--accent)] hover:border-[var(--accent)] transition-all" title="Chuyển đổi giao diện (Sáng/Tối)">
+                <svg id="sunIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="5"></circle>
+                    <line x1="12" y1="1" x2="12" y2="3"></line>
+                    <line x1="12" y1="21" x2="12" y2="23"></line>
+                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                    <line x1="1" y1="12" x2="3" y2="12"></line>
+                    <line x1="21" y1="12" x2="23" y2="12"></line>
+                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                </svg>
+                <svg id="moonIcon" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                </svg>
+            </button>
+
+            <!-- Avatar -->
+            <div class="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--gradient-start)] to-[var(--gradient-end)] flex items-center justify-center text-white font-bold cursor-pointer shadow-sm">
+                U
+            </div>
+        </div>
+    </header>
+
+    <!-- ==================== Main Content ==================== -->
+    <main class="flex flex-1 overflow-hidden relative z-10">
+
+        <!-- Left Panel - Video List -->
+        <aside class="panel-left bg-[var(--bg-secondary)] border-r border-[var(--border)] flex flex-col overflow-hidden" style="width: 320px; min-width: 240px; max-width: 480px;">
+            <div class="p-5 border-b border-[var(--border)]">
+                <h2 class="text-lg font-semibold mb-3">Danh sách bài giảng</h2>
+                <div class="flex items-center gap-2 text-sm text-[var(--fg-secondary)]">
+                    <span class="flex items-center gap-1">
+                        <svg class="w-4 h-4 text-[var(--success)]" fill="currentColor" viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="10"/>
+                        </svg>
+                        12/20 video
+                    </span>
+                    <span class="text-[var(--fg-muted)]">|</span>
+                    <span>60% hoàn thành</span>
+                </div>
+                <div class="mt-3 h-1.5 bg-[var(--bg-card)] rounded-full overflow-hidden border border-[var(--border)]">
+                    <div class="h-full bg-gradient-to-r from-[var(--gradient-start)] to-[var(--gradient-end)] rounded-full" style="width: 60%"></div>
+                </div>
+            </div>
+            <div class="flex-1 overflow-y-auto p-4" id="chapterList">
+                <!-- Chapters rendered by app.js -->
+            </div>
+        </aside>
+
+        <!-- Left Resizer -->
+        <div class="resizer" id="leftResizer"></div>
+
+        <!-- Center Panel - Video Player -->
+        <section class="flex-1 flex flex-col overflow-hidden bg-[var(--bg-primary)]">
+            <div class="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
+                <div class="max-w-5xl mx-auto w-full">
+
+                    <!-- Video Player -->
+                    <div class="video-container fade-in-up stagger-1" id="videoContainer">
+                        <video id="mainVideo" poster="https://images.unsplash.com/photo-1620712943543-bcc4688e7485?q=80&w=1280&auto=format&fit=crop">
+                            <source src="https://www.w3schools.com/html/mov_bbb.mp4" type="video/mp4">
+                        </video>
+                        <div class="video-controls">
+                            <div class="progress-bar" id="progressBar">
+                                <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-4">
+                                    <button class="w-10 h-10 rounded-full bg-[var(--control-bg)] flex items-center justify-center hover:bg-[var(--control-hover)] transition-colors" id="playBtn" aria-label="Phát video">
+                                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" id="playIcon">
+                                            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                                        </svg>
+                                    </button>
+                                    <button class="w-8 h-8 rounded-full bg-[var(--control-bg)] flex items-center justify-center hover:bg-[var(--control-hover)] transition-colors" id="muteBtn" aria-label="Âm thanh">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" id="volumeIcon">
+                                            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                                            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                                            <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+                                        </svg>
+                                    </button>
+                                    <span class="text-sm font-medium"><span id="currentTime">0:00</span> / <span id="duration">0:00</span></span>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <select class="bg-[var(--control-bg)] border-none text-sm px-2 py-1.5 rounded cursor-pointer outline-none hover:bg-[var(--control-hover)] transition-colors" id="speedSelect">
+                                        <option value="0.5">0.5x</option>
+                                        <option value="0.75">0.75x</option>
+                                        <option value="1" selected>1x</option>
+                                        <option value="1.25">1.25x</option>
+                                        <option value="1.5">1.5x</option>
+                                        <option value="2">2x</option>
+                                    </select>
+                                    <button class="w-8 h-8 rounded-full bg-[var(--control-bg)] flex items-center justify-center hover:bg-[var(--control-hover)] transition-colors" aria-label="Toàn màn hình">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Video Info -->
+                    <div class="mt-6 fade-in-up stagger-2">
+                        <h2 class="text-2xl lg:text-3xl font-bold mb-2" id="videoTitle">Chương 1: Giới thiệu về Machine Learning</h2>
+                        <p class="text-[var(--fg-secondary)] mb-4 text-base" id="videoDescription">Bài giảng giới thiệu các khái niệm cơ bản về Machine Learning, các loại hình học máy và ứng dụng thực tế.</p>
+
+                        <div class="flex items-center gap-4 mb-6">
+                            <span class="flex items-center gap-2 text-sm text-[var(--fg-secondary)] bg-[var(--bg-elevated)] px-3 py-1 rounded-full">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <polyline points="12 6 12 12 16 14"></polyline>
+                                </svg>
+                                <span id="videoDuration">45 phút</span>
+                            </span>
+                            <span class="flex items-center gap-2 text-sm text-[var(--fg-secondary)] bg-[var(--bg-elevated)] px-3 py-1 rounded-full">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                </svg>
+                                1,234 lượt xem
+                            </span>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="flex flex-wrap items-center gap-3 border-b border-[var(--border)] pb-6">
+                            <button class="btn-primary" id="mindmapBtn">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <circle cx="12" cy="12" r="2"></circle>
+                                    <path d="M12 2v4m0 12v4M2 12h4m12 0h4"></path>
+                                    <path d="m4.93 4.93 2.83 2.83m8.48 8.48 2.83 2.83m-2.83-14.14 2.83 2.83M4.93 19.07l2.83-2.83"></path>
+                                </svg>
+                                Tạo sơ đồ tư duy
+                            </button>
+                            <button class="btn-secondary" id="transcriptBtn">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                    <polyline points="14 2 14 8 20 8"></polyline>
+                                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                                    <polyline points="10 9 9 9 8 9"></polyline>
+                                </svg>
+                                Bóc băng Phụ đề
+                            </button>
+                            <button class="btn-secondary" id="notesBtn">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                </svg>
+                                Ghi chú
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Transcript Panel -->
+                    <div class="mt-6 hidden fade-in-up" id="transcriptPanel">
+                        <div class="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] p-5">
+                            <h3 class="font-semibold mb-4 flex items-center gap-2 text-lg">
+                                <svg class="w-5 h-5 text-[var(--accent)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                    <polyline points="14 2 14 8 20 8"></polyline>
+                                </svg>
+                                Phụ đề bóc băng từ AI
+                            </h3>
+                            <div class="space-y-2 max-h-64 overflow-y-auto pr-2" id="transcriptContent">
+                                <!-- Transcript rendered by ui.js -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Notes Panel -->
+                    <div class="mt-6 hidden fade-in-up" id="notesPanel">
+                        <div class="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] p-5">
+                            <h3 class="font-semibold mb-4 flex items-center gap-2 text-lg">
+                                <svg class="w-5 h-5 text-[var(--accent)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                </svg>
+                                Ghi chú của bạn
+                            </h3>
+                            <textarea id="notesTextarea" class="w-full h-32 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg p-4 text-sm resize-none focus:border-[var(--accent)] transition-colors outline-none text-[var(--fg-primary)]" placeholder="Viết ghi chú tại đây..."></textarea>
+                            <div class="flex justify-end mt-4">
+                                <button class="btn-primary text-sm py-2" id="saveNotesBtn">Lưu ghi chú</button>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+        <!-- Right Resizer -->
+        <div class="resizer" id="rightResizer"></div>
+
+        <!-- Right Panel - Chatbot -->
+        <aside class="panel-right bg-[var(--bg-secondary)] border-l border-[var(--border)] flex flex-col overflow-hidden shadow-[-10px_0_20px_rgba(0,0,0,0.05)]" style="width: 380px; min-width: 300px; max-width: 520px;">
+            <div class="p-4 border-b border-[var(--border)] bg-[var(--bg-secondary)]/80 backdrop-blur z-10">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--gradient-start)] to-[var(--gradient-end)] flex items-center justify-center shadow-sm">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <h2 class="font-bold">Trợ lý ảo RAG</h2>
+                        <p class="text-xs text-[var(--fg-muted)]">Truy xuất ngữ cảnh đa phương thức</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chat Messages -->
+            <div class="flex-1 overflow-y-auto p-4 space-y-5" id="chatMessages">
+                <div class="chat-message">
+                    <div class="flex gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-[var(--gradient-start)] to-[var(--gradient-end)] flex items-center justify-center flex-shrink-0 shadow-sm mt-1">
+                            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                            </svg>
+                        </div>
+                        <div class="flex-1">
+                            <div class="bg-[var(--bg-card)] border border-[var(--border)] rounded-2xl rounded-tl-none p-3.5 text-sm shadow-sm leading-relaxed">
+                                <p>Xin chào! Hệ thống RAG đã lập chỉ mục (index) xong các video bài giảng môn này. Bạn có muốn tra cứu công thức hay khái niệm nào không?</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Related Videos -->
+            <div class="border-t border-[var(--border)] p-4 hidden bg-[var(--bg-card)]" id="relatedVideosSection">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-[var(--fg-muted)] mb-3 flex items-center gap-2">
+                    <svg class="w-4 h-4 text-[var(--accent)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                    </svg>
+                    Trích xuất từ các Video
+                </h3>
+                <div class="space-y-2 max-h-48 overflow-y-auto pr-1" id="relatedVideosList">
+                    <!-- Related videos rendered by chat.js -->
+                </div>
+            </div>
+
+            <!-- Chat Input -->
+            <div class="p-4 border-t border-[var(--border)] bg-[var(--bg-secondary)]">
+                <div class="flex gap-2">
+                    <input type="text" id="chatInput" placeholder="Hỏi trợ lý (VD: Thuật toán KNN)..." class="flex-1 px-4 py-3 bg-[var(--bg-card)] border border-[var(--border)] rounded-xl text-[15px] focus:border-[var(--accent)] outline-none transition-colors" />
+                    <button class="w-12 h-12 rounded-xl bg-gradient-to-r from-[var(--gradient-start)] to-[var(--gradient-end)] flex items-center justify-center hover:shadow-lg hover:shadow-[var(--accent-glow)] transition-all flex-shrink-0" id="sendBtn" aria-label="Gửi tin nhắn">
+                        <svg class="w-5 h-5 text-white transform rotate-45 -mt-1 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+                        </svg>
+                    </button>
+                </div>
+                <div class="flex gap-2 mt-3 flex-wrap">
+                    <button class="quick-question text-xs px-3 py-1.5 bg-[var(--bg-card)] rounded-full border border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors">Machine Learning là gì?</button>
+                    <button class="quick-question text-xs px-3 py-1.5 bg-[var(--bg-card)] rounded-full border border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors">Supervised Learning</button>
+                </div>
+            </div>
+        </aside>
+    </main>
+
+    <!-- ==================== Mindmap Modal ==================== -->
+    <div class="modal-overlay" id="mindmapModal">
+        <div class="modal-content flex flex-col">
+            <div class="flex items-center justify-between p-5 border-b border-[var(--border)]">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-[var(--gradient-start)] to-[var(--gradient-end)] flex items-center justify-center shadow-sm">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="2"></circle>
+                            <path d="M12 2v4m0 12v4M2 12h4m12 0h4"></path>
+                            <path d="m4.93 4.93 2.83 2.83m8.48 8.48 2.83 2.83m-2.83-14.14 2.83 2.83M4.93 19.07l2.83-2.83"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-lg">Sơ đồ tư duy Bài giảng</h3>
+                        <p class="text-sm text-[var(--fg-muted)]" id="mindmapVideoTitle">Chương 1: Giới thiệu về Machine Learning</p>
+                    </div>
+                </div>
+                <button class="w-10 h-10 rounded-xl hover:bg-[var(--bg-elevated)] flex items-center justify-center transition-colors border border-transparent hover:border-[var(--border)]" id="closeMindmap" aria-label="Đóng sơ đồ">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="mindmap-container flex-1 bg-[var(--bg-secondary)]" id="mindmapContent">
+                <!-- Mindmap rendered by ui.js -->
+            </div>
+            <div class="p-5 border-t border-[var(--border)] flex justify-end gap-3 bg-[var(--bg-card)]">
+                <button class="btn-secondary text-sm py-2" id="downloadMindmapBtn">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    Tải ảnh PNG
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== Scripts (ES Modules) ==================== -->
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>
