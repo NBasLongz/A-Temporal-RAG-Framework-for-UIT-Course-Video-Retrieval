@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  videolearn-web:
+    build: .
+    container_name: videolearn_app
+    ports:
+      - "8000:8000"
+    volumes:
+      # Lắp ráp (mount) thư mục data từ máy thật vào container để không làm mất / phải copy lại video, vector_db
+      - ./data:/app/data
+      
+      # Tương tự nếu bạn muốn lưu log ra ngoài máy thật thì có thể mount logs/
+      # - ./logs:/app/logs
+      
+    environment:
+      # Đưa các biến môi trường cấu hình API key vào đây
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+    restart: unless-stopped
