@@ -1,93 +1,108 @@
 <p align="center">
-  <a href="https://www.uit.edu.vn/" title="University of Information Technology">
-    <img src="https://i.imgur.com/WmMnSRt.png" alt="University of Information Technology (UIT)" width="400">
-  </a>
+
+<a href="https://www.uit.edu.vn/" title="University of Information Technology">
+
+<img src="https://i.imgur.com/WmMnSRt.png" alt="University of Information Technology (UIT)" width="400">
+
+</a>
+
 </p>
 
-<h1 align="center"><b>CS431 - Deep Learning Techniques And Applications</b></h1>
+<h1 align="center"\><b\>CS431 - Deep Learning Techniques and Applications</b\></h1\>
 
-## Student information
+## Student Information
 
-| Student ID | Full name        | GitHub                                  | Email                  |
+| Student ID | Full Name        | GitHub                                  | Email                  |
 |:----------:|------------------|-----------------------------------------|------------------------|
-| 23521106   | Dương Thái Ý Nhi | [y-nhi-duong](https://github.com/y-nhi-duong) | 23521106@gm.uit.edu.vn |
-| 23520368   | Lương Quang Duy  | [DuyLuong2k5](https://github.com/DuyLuong2k5) | 23520368@gm.uit.edu.vn |
-| 23520880   | Nguyễn Bá Long   | [NBasLongz](https://github.com/NBasLongz) | 23520880@gm.uit.edu.vn |
+| 23521106   | Duong Thai Y Nhi | [dtynhi](https://github.com/dtynhi)     | 23521106@gm.uit.edu.vn |
+| 23520368   | Luong Quang Duy  | [duylw](https://github.com/duylw)       | 23520368@gm.uit.edu.vn |
+| 23520880   | Nguyen Ba Long   | [NBasLongz](https://github.com/NBasLongz) | 23520880@gm.uit.edu.vn |
 
----
+-----
 
 # UIT Multimodal Video RAG - VideoLearn
 
-Hệ thống RAG đa phương thức (Multimodal Retrieval-Augmented Generation) hỗ trợ truy vấn và tóm tắt nội dung bài giảng video dành cho sinh viên đại học (cụ thể tại UIT).
+A Multimodal Retrieval-Augmented Generation (RAG) system that helps university students (specifically at UIT) easily search and summarize video lecture content.
 
-## 🌟 Giới thiệu
-Trong môi trường đại học, số lượng video bài giảng ngày càng tăng khiến việc tìm kiếm lại một công thức, định nghĩa hay lời giải thích cụ thể trở nên vô cùng mất thời gian. 
+## Introduction
 
-**VideoLearn** được xây dựng để biến kho video bài giảng thành một "thư viện kiến thức" có thể tương tác trực tiếp. Hệ thống có khả năng "đọc" slide và "nghe" lời giảng đồng thời, từ đó trả lời câu hỏi của sinh viên kèm theo bằng chứng trích dẫn trực quan (tên video, mốc thời gian, và liên kết trực tiếp đến phân đoạn video).
+In a university environment, the growing number of video lectures makes it very time-consuming to find a specific formula, definition, or explanation.
 
-## ✨ Tính năng chính
-- **Trích xuất đa phương thức:** Tự động nhận dạng giọng nói tiếng Việt (ASR) và trích xuất văn bản/công thức từ slide (OCR) trong video.
-- **Truy vấn Hybrid Search:** Kết hợp tìm kiếm ngữ nghĩa (Semantic Search) và tìm kiếm từ khóa (BM25) để đạt độ chính xác cao nhất.
-- **Phản hồi thông minh:** Sinh câu trả lời tự nhiên bằng LLM, loại bỏ các trích dẫn thừa và trình bày đẹp mắt qua Markdown.
-- **Điều hướng trực tiếp:** Hiển thị danh sách các phân đoạn video liên quan, cho phép người dùng nhấn vào để trình phát tự động chuyển video và nhảy đến đúng mốc thời gian (timestamp).
-- **Giao diện hiện đại:** Hỗ trợ Dark/Light mode, trình phát video tùy chỉnh, và thiết kế responsive.
+**VideoLearn** is built to turn your collection of video lectures into an interactive "knowledge library." The system can "read" presentation slides and "listen" to the lecture at the same time. Based on this, it answers students' questions and provides clear visual evidence (video name, timestamps, and direct links to the exact video segment).
 
-## 🛠 Công nghệ sử dụng
-- **ASR (Speech-to-Text):** `PhoWhisper` (Tối ưu cho nhận dạng tiếng Việt).
-- **OCR:** `PaddleOCR` (Đọc chữ và công thức trên slide).
-- **Embedding:** `Google Generative AI` (`gemini-embedding-2-preview`).
-- **Vector Database:** `ChromaDB`.
-- **LLM Generation:** `Gemini 1.5 Flash` / `Gemini 2.0 Flash Lite`.
-- **Backend:** `FastAPI` (Python).
-- **Frontend:** Vanilla HTML/JS + Tailwind CSS (Native).
+## Key Features
 
-## 📂 Cấu trúc thư mục
+  * **Multimodal Extraction:** Automatically recognizes Vietnamese speech (ASR) and extracts text and formulas from slides (OCR) in the videos.
+  * **Hybrid Search:** Combines semantic search and keyword search (BM25) to provide the most accurate results.
+  * **Smart Responses:** Generates natural-sounding answers using a Large Language Model (LLM), removes unnecessary citations, and presents the text beautifully using Markdown.
+  * **Direct Navigation:** Displays a list of related video segments. Users can click on them, and the video player will automatically load the video and jump to the exact timestamp.
+  * **Modern Interface:** Supports Dark/Light mode, a custom video player, and a fully responsive design.
+
+##  Technologies Used
+
+  * **ASR (Speech-to-Text):** `faster-whisper (large-v3)` (Optimized for Vietnamese speech recognition).
+  * **OCR:** `Qwen/Qwen2-VL-2B-Instruct`.
+  * **Embedding:** `bge-m3 /  multilingual-e5-large/ gemini-embedding-2-preview.
+  * **Vector Database:** `ChromaDB`.
+  * **LLM Generation:** `Gemini 1.5 Flash` / `Gemini 2.0 Flash Lite`.
+  * **Backend:** `FastAPI` (Python).
+  * **Frontend:** Vanilla HTML/JS + Tailwind CSS (Native).
+
+## Folder Structure
+
 ```text
 uit_multimodal_video_rag/
-├── app/                        # Ứng dụng Web
-│   ├── api/                    # Backend FastAPI (Routes, RAG Service, Schemas)
+├── app/                        # Web Application
+│   ├── api/                    # FastAPI Backend (Routes, RAG Service, Schemas)
 │   └── frontend/               # Frontend (HTML, CSS, JS)
-├── config/                     # Cấu hình hệ thống & Database
-├── data/                       # Dữ liệu (Video, Audio, Vector Store, SQLite)
-│   ├── raw_videos/             # Chứa các file bài giảng .mp4
-│   └── vector_store/           # Chứa ChromaDB và database.db
-├── src/                        # Mã nguồn xử lý AI (Ingestion, RAG, Generation)
-├── notebooks/                  # Notebook quy trình triển khai mẫu
-├── requirements.txt            # Danh sách thư viện phụ thuộc
-└── .env                        # Biến môi trường (API Keys)
+├── config/                     # System & Database Configuration
+├── data/                       # Data (Videos, Audio, Vector Store, SQLite)
+│   ├── raw_videos/             # Contains .mp4 lecture files
+│   └── vector_store/           # Contains ChromaDB and database.db
+├── src/                        # AI Processing Source Code (Ingestion, RAG, Generation)
+├── notebooks/                  # Sample deployment notebooks
+├── requirements.txt            # List of required dependencies
+└── .env                        # Environment variables (API Keys)
 ```
 
-## 🚀 Hướng dẫn cài đặt & Sử dụng
+## Setup & Usage Guide
 
-### 1. Cài đặt môi trường
+### 1\. Environment Setup
+
 ```bash
-# Clone repository
+# Clone the repository
 git clone https://github.com/NBasLongz/A-Temporal-RAG-Framework-for-UIT-Course-Video-Retrieval.git
 cd A-Temporal-RAG-Framework-for-UIT-Course-Video-Retrieval
 
-# Tạo môi trường ảo
+# Create a virtual environment
 python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
+source .venv/bin/activate  # For Windows: .venv\Scripts\activate
 
-# Cài đặt thư viện
+# Install dependencies
 pip install -r requirements.txt
 ```
 
-### 2. Cấu hình
-Tạo file `.env` và thêm Google API Key của bạn:
+### 2\. Configuration
+
+Create a `.env` file in the root directory and add your Google API Key:
+
 ```env
 GOOGLE_API_KEY=your_gemini_api_key_here
 ```
 
-### 3. Khởi chạy ứng dụng
+### 3\. Run the Application
+
 ```bash
-# Chạy Web Server (FastAPI + Uvicorn)
+# Run the Web Server (FastAPI + Uvicorn)
 python -m uvicorn app.api.main:app --reload --port 8500
 ```
-Sau đó, truy cập **`http://127.0.0.1:8500`** trên trình duyệt.
 
-## 📜 Giấy phép
-Dự án được phân phối dưới giấy phép MIT.
+After starting the server, open your web browser and go to **`http://127.0.0.1:8500`**.
 
----
-<p align="center">Made with ❤️ by UIT Students</p>
+## License
+
+This project is distributed under the MIT License.
+
+-----
+
+<p align="center"\>Made with 🐳 by UIT Students\</p\>
