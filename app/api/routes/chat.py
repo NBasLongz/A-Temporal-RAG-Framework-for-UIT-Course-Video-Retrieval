@@ -40,9 +40,9 @@ async def chat(request: ChatRequest):
             Source(
                 video_title=vid.get("title", "Bài giảng UIT"),
                 timestamp=ts_str,
-                content_snippet="[Xem video để biết chi tiết]",  # Có thể pass nội dung thật nếu cần
+                content_snippet="[Xem video để biết chi tiết]",
                 filename=vid.get("filename", ""),  # Thêm filename để frontend match video
-                video_id=int(vid.get("video_id", 0).split(".")[0]) if vid.get("video_id") else None  # Nếu có
+                video_id=None
             )
         )
 

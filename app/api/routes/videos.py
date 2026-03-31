@@ -21,24 +21,28 @@ VIDEOS_DIR = PROJECT_ROOT / "data" / "raw_videos"
 
 def parse_video_filename(filename: str) -> dict | None:
     """
-    Parse tên file video để trích xuất chương và tiêu đề.
-    VD: '[CS431 - Chương 1] Video 1.1 Giới thiệu môn học.mp4'
-         -> chapter_num=1, title='Video 1.1 Giới thiệu môn học'
-    
-    VD: '[CS431 - Chương 10] Part 3_ Cơ chế Self-Attention.mp4'
-         -> chapter_num=10, title='Part 3: Cơ chế Self-Attention'
+    Parse tên file video một cách linh hoạt.
+    Hỗ trợ: '[CS431 - Chương 1] ...', '[CS431 - Chuang 10] ...', v.v.
     """
-    # Pattern: [CS431 - Chương X] <title>.mp4
-    match = re.match(
-        r'\[CS431\s*-\s*Chương\s*(\d+)\]\s*(.+)\.mp4$',
-        filename,
-        re.IGNORECASE,
-    )
-    if not match:
+    if not filename.endswith(".mp4"):
         return None
 
-    chapter_num = int(match.group(1))
-    title = match.group(2).strip()
+    # Lấy phần trong ngoặc vuông đầu tiên
+    if "]" not in filename:
+        return None
+    
+    # Loại bỏ mã môn học CS431 để tránh nhầm lẫn (ví dụ: [CS431] -> [)
+    temp_name = re.sub(r'\[\s*CS\s*431\s*[-]*\s*', '[', filename, flags=re.IGNORECASE)
+    
+    # Tìm số đầu tiên xuất hiện sau khi đã loại bỏ CS431
+    match = re.search(r'(\d+)', temp_name)
+    if match:
+        chapter_num = int(match.group(1))
+    else:
+        return None
+        
+    # Tiêu đề là phần sau dấu ]
+    title = filename.split("]", 1)[-1].replace(".mp4", "").strip() if "]" in filename else filename.replace(".mp4", "")
     # Thay thế _ bằng : cho đẹp
     title = title.replace('_', ':')
 

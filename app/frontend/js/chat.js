@@ -117,6 +117,28 @@ function showTypingIndicator() {
 }
 
 /**
+ * Tính độ tương tự giữa 2 chuỗi (0-1)
+ */
+function calculateSimilarity(str1, str2) {
+    const s1 = (str1 || "").normalize('NFC').toLowerCase().trim();
+    const s2 = (str2 || "").normalize('NFC').toLowerCase().trim();
+    
+    // Exact match
+    if (s1 === s2) return 1;
+    
+    // Substring match
+    if (s1.includes(s2) || s2.includes(s1)) return 0.9;
+    
+    // Levenshtein distance (đơn giản)
+    let matched = 0;
+    const minLen = Math.min(s1.length, s2.length);
+    for (let i = 0; i < minLen; i++) {
+        if (s1[i] === s2[i]) matched++;
+    }
+    return matched / Math.max(s1.length, s2.length);
+}
+
+/**
  * Hiển thị related videos/sources từ RAG.
  * @param {Array<{video_title: string, timestamp: string, filename: string, content_snippet: string}>} sources
  */
@@ -130,7 +152,7 @@ function renderRelatedVideos(sources) {
     list.innerHTML = sources
         .map(
             (source) => `
-        <div class="video-suggestion group flex items-start gap-3 p-2.5 hover:bg-[var(--bg-elevated)] rounded-xl cursor-pointer transition-colors border border-transparent hover:border-[var(--border)]" data-timestamp="${source.timestamp}" data-filename="${escapeHtml(source.filename || '')}">
+        <div class="video-suggestion group flex items-start gap-3 p-2.5 hover:bg-[var(--bg-elevated)] rounded-xl cursor-pointer transition-colors border border-transparent hover:border-[var(--border)]" data-timestamp="${source.timestamp}" data-video-title="${escapeHtml(source.video_title || '')}" data-filename="${escapeHtml(source.filename || '')}">
             <div class="w-7 h-7 rounded-lg flex items-center justify-center bg-[var(--accent-dim)] text-[var(--accent)] mt-0.5 flex-shrink-0">
                 <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
                     <polygon points="5 3 19 12 5 21 5 3"></polygon>
@@ -147,14 +169,15 @@ function renderRelatedVideos(sources) {
         )
         .join('');
 
-    // Click vào source → tìm video tương ứng bằng filename, load file và seek tới đúng timestamp
+    // Click vào source → tìm video tương ứng bằng fuzzy match
     list.querySelectorAll('.video-suggestion').forEach((el) => {
         el.addEventListener('click', () => {
             const timeStr = el.dataset.timestamp;
+            const targetVideoTitle = el.dataset.videoTitle;
             const targetFilename = el.dataset.filename;
             
-            if (!timeStr || !targetFilename) {
-                console.warn('[Chat] Missing timestamp or filename in video source');
+            if (!timeStr) {
+                console.warn('[Chat] Missing timestamp in video source');
                 return;
             }
             
@@ -167,46 +190,119 @@ function renderRelatedVideos(sources) {
             }
 
             const videoItems = document.querySelectorAll('.video-item');
+            if (videoItems.length === 0) {
+                console.warn('[Chat] No videos found in playlist');
+                return;
+            }
+
             let foundItem = null;
 
-            // Tìm video item khớp với filename
+            // 1. Tìm video item khớp CHÍNH XÁC filename (với chuẩn hóa Unicode NFC)
+            const targetNorm = targetFilename.normalize('NFC').toLowerCase();
+            const targetTitleNorm = targetVideoTitle.normalize('NFC').toLowerCase();
+
             for (const item of videoItems) {
-                const itemFilename = item.dataset.filename;
-                if (itemFilename && itemFilename === targetFilename) {
+                const itemFilename = (item.dataset.filename || "").normalize('NFC').toLowerCase();
+                const itemTitle = (item.querySelector('h4').textContent || "").trim().normalize('NFC').toLowerCase();
+                
+                // Ưu tiên khớp theo filename
+                if (itemFilename && itemFilename === targetNorm) {
                     foundItem = item;
                     break;
+                }
+                
+                // Nếu chưa tìm thấy, lưu lại item khớp theo tiêu đề (title) như một phương án dự phòng
+                if (!foundItem && itemTitle === targetTitleNorm) {
+                    foundItem = item;
                 }
             }
 
             if (!foundItem) {
-                console.warn(`[Chat] Video not found in playlist: ${targetFilename}`);
-                // Optional: Show error to user
-                // alert(`Không tìm thấy video: "${targetFilename}"`);
+                console.log(`[Chat] Exact match failed for ${targetFilename}, trying fuzzy match...`);
+            }
+
+            // Strategy 2: Fuzzy title match (nếu chưa tìm được)
+            if (!foundItem && targetVideoTitle) {
+                let bestScore = 0;
+                for (const item of videoItems) {
+                    const itemTitle = item.querySelector('h4')?.textContent.trim() || '';
+                    const score = calculateSimilarity(targetVideoTitle, itemTitle);
+                    
+                    if (score > bestScore) {
+                        bestScore = score;
+                        foundItem = item;
+                    }
+                }
+                
+                if (bestScore > 0.5) {
+                    const matchedTitle = foundItem.querySelector('h4').textContent.trim();
+                    console.log(`[Chat] Found video by fuzzy match (score: ${bestScore.toFixed(2)}): "${targetVideoTitle}" → "${matchedTitle}"`);
+                } else {
+                    foundItem = null;
+                }
+            }
+
+            if (!foundItem) {
+                console.warn(`[Chat] Video not found - title: "${targetVideoTitle}", filename: "${targetFilename}"`);
+                console.warn('[Chat] Available videos:', Array.from(videoItems).map(v => v.querySelector('h4').textContent.trim()).slice(0, 5), '...');
                 return;
             }
 
-            // Chuyển sang video mới (trigger event bên app.js)
-            foundItem.click();
+            console.log(`[Chat] Loading video: ${foundItem.querySelector('h4').textContent.trim()}`);
 
-            // Chờ video load metadata rồi mới seek
-            const video = videoPlayer.getVideo();
-            
-            // Nếu video đã load sẵn metadata, seek ngay lập tức
-            if (video.readyState >= 1) { // HAVE_METADATA hoặc cao hơn
-                video.currentTime = seconds;
-                video.play().catch(() => {
-                    console.warn('[Chat] Auto-play bị chặn bởi browser policy');
-                });
-            } else {
-                // Nếu chưa load, đợi loadedmetadata event
-                const onLoadedMetaData = () => {
+            // ✅ Tự load video thay vì gọi click() (vì click() có thể không trigger event listener)
+            const videoId = parseInt(foundItem.dataset.videoId, 10);
+            const videoTitle = foundItem.querySelector('h4').textContent;
+            const filename = foundItem.dataset.filename;
+
+            // Highlight video item
+            document.querySelectorAll('.video-item').forEach((v) => v.classList.remove('active'));
+            foundItem.classList.add('active');
+
+            // Update UI title
+            document.getElementById('videoTitle').textContent = videoTitle;
+
+            // Mở rộng chương chứa video (Accordion)
+            const chapterItem = foundItem.closest('.chapter-item');
+            if (chapterItem && !chapterItem.classList.contains('open')) {
+                const header = chapterItem.querySelector('.chapter-header');
+                if (header) header.click();
+            }
+
+            // Scroll tới video
+            foundItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+            // ★ Đổi nguồn video player ★
+            if (filename && videoPlayer) {
+                const video = videoPlayer.getVideo();
+                const encodedFilename = encodeURIComponent(filename);
+                
+                console.log(`[Chat] Setting video src: /videos/${encodedFilename}`);
+                video.src = `/videos/${encodedFilename}`;
+                video.load();
+
+                // Chờ video load metadata rồi mới seek
+                const playVideo = () => {
+                    console.log(`[Chat] Video loaded, seeking to ${mins}:${String(secs).padStart(2, '0')}`);
                     video.currentTime = seconds;
-                    video.play().catch(() => {
-                        console.warn('[Chat] Auto-play bị chặn bởi browser policy');
+                    video.play().catch((err) => {
+                        console.warn('[Chat] Auto-play bị chặn bởi browser policy:', err);
                     });
-                    video.removeEventListener('loadedmetadata', onLoadedMetaData);
                 };
-                video.addEventListener('loadedmetadata', onLoadedMetaData);
+
+                // Nếu video đã load sẵn metadata, seek ngay lập tức
+                if (video.readyState >= 1) { // HAVE_METADATA hoặc cao hơn
+                    playVideo();
+                } else {
+                    // Nếu chưa load, đợi loadedmetadata event
+                    const onLoadedMetaData = () => {
+                        playVideo();
+                        video.removeEventListener('loadedmetadata', onLoadedMetaData);
+                    };
+                    video.addEventListener('loadedmetadata', onLoadedMetaData, { once: true });
+                }
+            } else {
+                console.warn('[Chat] Video player not available or no filename');
             }
         });
     });

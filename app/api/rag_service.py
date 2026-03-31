@@ -140,9 +140,8 @@ class RagService:
                     filename = v_name + ".mp4" if not v_name.endswith(".mp4") else v_name
 
                     related_vids.append({
-                        "video_id": v_name + ".mp4",  # Giả định video name khớp file .mp4
+                        "filename": filename, # Tên file video để frontend so khớp
                         "title": formatted_title,
-                        "filename": filename,  # Thêm filename để frontend xác định video
                         "timestamp": ts,
                         "relevance_score": 0.99  # Mock score or mapping from RRF 
                     })
