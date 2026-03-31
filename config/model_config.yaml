@@ -20,7 +20,7 @@ ocr:
 # Embedding (Google Gemini hoặc HuggingFace E5)
 embedding:
   provider: "google"  # 'google' hoặc 'huggingface'
-  model_name: "models/text-embedding-004" # có thể dùng "gemini-embedding-2-preview" nếu key support
+  model_name: "models/gemini-embedding-2-preview" # bắt buộc phải dùng model này để khớp với ChromaDB local
   normalize_embeddings: true
   passage_prefix: "passage: "
   query_prefix: "query: "

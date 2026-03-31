@@ -291,12 +291,17 @@
 
             <!-- Related Videos -->
             <div class="border-t border-[var(--border)] p-4 hidden bg-[var(--bg-card)]" id="relatedVideosSection">
-                <h3 class="text-xs font-bold uppercase tracking-wider text-[var(--fg-muted)] mb-3 flex items-center gap-2">
-                    <svg class="w-4 h-4 text-[var(--accent)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                <button class="w-full flex items-center justify-between text-xs font-bold uppercase tracking-wider text-[var(--fg-muted)] mb-3 hover:text-[var(--fg-primary)] transition-colors cursor-pointer" id="toggleRelatedVideosBtn">
+                    <span class="flex items-center gap-2">
+                        <svg class="w-4 h-4 text-[var(--accent)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                        </svg>
+                        Trích xuất từ các Video
+                    </span>
+                    <svg class="w-4 h-4 transform transition-transform duration-200" id="relatedVideosChevron" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
                     </svg>
-                    Trích xuất từ các Video
-                </h3>
+                </button>
                 <div class="space-y-2 max-h-48 overflow-y-auto pr-1" id="relatedVideosList">
                     <!-- Related videos rendered by chat.js -->
                 </div>
@@ -359,6 +364,9 @@
             </div>
         </div>
     </div>
+
+    <!-- Markdown Parser -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
     <!-- ==================== Scripts (ES Modules) ==================== -->
     <script type="module" src="js/app.js"></script>

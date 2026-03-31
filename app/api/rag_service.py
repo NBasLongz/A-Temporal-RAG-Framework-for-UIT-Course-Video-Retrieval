@@ -1,6 +1,7 @@
 import os
 import sqlite3
 import logging
+import re
 from langchain_core.documents import Document
 from src.rag.embedder import Embedder
 from src.rag.vector_db import VectorStore
@@ -123,13 +124,21 @@ class RagService:
                 v_name = doc.metadata.get("video_name", "")
                 ts = doc.metadata.get("timestamp", 0)
                 
-                # Cần trích xuất "Chuong X Part Y..." vì frontend map = filename
+                # Cần trích xuất "Chuong X Part Y..." vì frontend map
                 key = f"{v_name}_{ts}"
                 if key not in seen:
                     seen.add(key)
+                    
+                    # Format title giống hệt UI parse_video_filename
+                    formatted_title = v_name
+                    if "]" in v_name:
+                        parts = v_name.split("]", 1)
+                        if len(parts) == 2:
+                            formatted_title = parts[1].strip().replace('_', ':')
+
                     related_vids.append({
                         "video_id": v_name + ".mp4", # Giả định video name khớp file .mp4
-                        "title": v_name,
+                        "title": formatted_title,
                         "timestamp": ts,
                         "relevance_score": 0.99  # Mock score or mapping from RRF 
                     })

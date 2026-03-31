@@ -78,9 +78,9 @@ Dựa trên các tài liệu bài giảng được truy xuất bên dưới, hã
 
 ### Quy tắc:
 1. **Chỉ trả lời dựa trên nội dung được cung cấp.** Nếu không tìm thấy thông tin, hãy nói rõ.
-2. **Trích dẫn nguồn:** Ghi rõ tên video và mốc thời gian (timestamp) cho mỗi thông tin bạn sử dụng.
-3. **Định dạng:** Sử dụng Markdown, bôi đậm thuật ngữ quan trọng.
-4. **Ngôn ngữ:** Trả lời bằng tiếng Việt.
+2. **Không tự trích dẫn nguồn:** Tuyệt đối KHÔNG ĐƯỢC viết thêm các câu trích dẫn có dạng `(Nguồn: Video...)` hay `Phút thứ...` vào câu trả lời vì giao diện frontend đã tự động xử lý phần nguồn video tách biệt.
+3. **Định dạng:** Sử dụng định dạng văn bản Markdown chuẩn (bôi đậm, in nghiêng, chia bullet points thật đẹp và sạch sẽ, không trả về raw text).
+4. **Ngôn ngữ:** Trả lời trực tiếp, ngôn ngữ tự nhiên, trôi chảy bằng tiếng Việt.
 
 ### Tài liệu bài giảng:
 {context}
