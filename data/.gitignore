@@ -1,0 +1,8 @@
+# Bỏ qua mọi file
+*
+# Nhưng KHÔNG bỏ qua các thư mục con (để Git dive vào trong)
+!*/
+# KHÔNG bỏ qua file .gitignore này
+!.gitignore
+# KHÔNG bỏ qua các file .gitkeep
+!.gitkeep

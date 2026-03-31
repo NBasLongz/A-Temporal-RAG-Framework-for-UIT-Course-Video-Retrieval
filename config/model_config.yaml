@@ -17,9 +17,10 @@ ocr:
   prompt: "Trích xuất văn bản tiếng Việt."
   max_new_tokens: 512
 
-# Embedding
+# Embedding (Google Gemini hoặc HuggingFace E5)
 embedding:
-  model_name: "intfloat/multilingual-e5-large"
+  provider: "google"  # 'google' hoặc 'huggingface'
+  model_name: "models/text-embedding-004" # có thể dùng "gemini-embedding-2-preview" nếu key support
   normalize_embeddings: true
   passage_prefix: "passage: "
   query_prefix: "query: "
