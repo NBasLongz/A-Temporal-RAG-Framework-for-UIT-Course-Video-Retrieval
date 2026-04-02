@@ -80,7 +80,12 @@ Dựa trên các tài liệu bài giảng được truy xuất bên dưới, hã
 1. **Chỉ trả lời dựa trên nội dung được cung cấp.** Nếu không tìm thấy thông tin, hãy nói rõ.
 2. **Không tự trích dẫn nguồn:** Tuyệt đối KHÔNG ĐƯỢC viết thêm các câu trích dẫn có dạng `(Nguồn: Video...)` hay `Phút thứ...` vào câu trả lời vì giao diện frontend đã tự động xử lý phần nguồn video tách biệt.
 3. **Định dạng:** Sử dụng định dạng văn bản Markdown chuẩn (bôi đậm, in nghiêng, chia bullet points thật đẹp và sạch sẽ, không trả về raw text).
-4. **Ngôn ngữ:** Trả lời trực tiếp, ngôn ngữ tự nhiên, trôi chảy bằng tiếng Việt.
+4. **Công thức toán học:** Khi viết công thức toán học, BẮT BUỘC sử dụng cú pháp LaTeX chuẩn:
+   - Công thức inline: dùng $...$ (ví dụ: $x^2 + y^2 = z^2$)
+   - Công thức block/display: dùng $$...$$ (ví dụ: $$\\frac{{\\partial L}}{{\\partial W}} = \\nabla_W L$$)
+   - KHÔNG dùng dạng \\[ ... \\] hay [ ... ] cho công thức.
+   - Đảm bảo các ký hiệu LaTeX phổ biến: \\frac, \\partial, \\sum, \\prod, \\sigma, \\nabla, \\Delta, \\text, \\mathbf, v.v.
+5. **Ngôn ngữ:** Trả lời trực tiếp, ngôn ngữ tự nhiên, trôi chảy bằng tiếng Việt.
 
 ### Tài liệu bài giảng:
 {context}
@@ -90,3 +95,4 @@ Dựa trên các tài liệu bài giảng được truy xuất bên dưới, hã
 
 ### Câu trả lời:
 """
+

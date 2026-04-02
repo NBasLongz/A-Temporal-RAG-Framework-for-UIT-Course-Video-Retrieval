@@ -501,3 +501,38 @@ header, aside, .chapter-header, .chapter-content, .bg-\[var\(--bg-card\)\] {
     overflow-x: auto;
     margin-bottom: 0.75rem;
 }
+
+/* ==================== KaTeX Math Rendering ==================== */
+.markdown-body .katex-display {
+    margin: 0.75rem 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 0.5rem 0;
+}
+.markdown-body .katex {
+    font-size: 1.05em;
+    color: var(--fg-primary);
+}
+.markdown-body .katex-display > .katex {
+    font-size: 1.15em;
+}
+.markdown-body .katex .mord,
+.markdown-body .katex .mop,
+.markdown-body .katex .mbin,
+.markdown-body .katex .mrel {
+    color: inherit;
+}
+
+/* ==================== Search Highlight ==================== */
+.video-item.search-hidden {
+    display: none !important;
+}
+.chapter-item.search-hidden {
+    display: none !important;
+}
+.search-highlight {
+    background: var(--accent-dim);
+    color: var(--accent);
+    border-radius: 2px;
+    padding: 0 2px;
+}

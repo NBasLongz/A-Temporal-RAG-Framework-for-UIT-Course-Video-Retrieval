@@ -65,6 +65,19 @@ export function initVideoPlayer() {
 
     video.addEventListener('loadedmetadata', () => {
         durationEl.textContent = formatTime(video.duration);
+        
+        // Cập nhật thẻ hiển thị thời lượng ở header
+        const videoDurationEl = document.getElementById('videoDuration');
+        if (videoDurationEl) {
+            const totalSeconds = video.duration;
+            const mins = Math.floor(totalSeconds / 60);
+            const secs = Math.floor(totalSeconds % 60);
+            if (mins > 0) {
+                videoDurationEl.textContent = `${mins} phút ${secs > 0 ? secs + ' giây' : ''}`;
+            } else {
+                videoDurationEl.textContent = `${secs} giây`;
+            }
+        }
     });
 
     progressBar.addEventListener('click', (e) => {

@@ -1,17 +1,19 @@
 /**
- * chat.js — Chat UI Module
- * Quản lý gửi/nhận tin nhắn, typing indicator, related videos.
- * Sử dụng apiClient (async/await) để gọi REST API.
+ * chat.js — Chat UI Module (V4 — FIXED LaTeX + marked v4/v5 compatible)
+ *
+ * Chiến lược:
+ * - Trích xuất LaTeX → render thành HTML bằng katex.renderToString() NGAY LẬP TỨC
+ * - Dùng PLAIN-TEXT placeholder để marked không biến đổi
+ * - Dùng marked.parse(text, options) thay vì marked.setOptions() — tương thích v4 & v5+
+ * - Khôi phục rendered HTML sau khi marked xong → không race condition, không lỗi regex
  */
 
 import { apiClient } from './api.js';
 
 let videoPlayer = null;
 
-/**
- * Khởi tạo chat module.
- * @param {{ seekTo: Function }} playerRef - Reference đến video player
- */
+/* ───────────────────────── Init ───────────────────────── */
+
 export function initChat(playerRef) {
     videoPlayer = playerRef;
 
@@ -23,7 +25,6 @@ export function initChat(playerRef) {
         if (e.key === 'Enter') handleChat();
     });
 
-    // Quick questions
     document.querySelectorAll('.quick-question').forEach((btn) => {
         btn.addEventListener('click', () => {
             chatInput.value = btn.textContent;
@@ -31,7 +32,6 @@ export function initChat(playerRef) {
         });
     });
 
-    // Toggle related videos
     const toggleRelatedVideosBtn = document.getElementById('toggleRelatedVideosBtn');
     if (toggleRelatedVideosBtn) {
         toggleRelatedVideosBtn.addEventListener('click', () => {
@@ -43,11 +43,8 @@ export function initChat(playerRef) {
     }
 }
 
-/**
- * Thêm tin nhắn vào chat.
- * @param {string} text - Nội dung tin nhắn (có thể chứa HTML)
- * @param {boolean} isUser - Tin nhắn từ người dùng?
- */
+/* ───────────────────── Message Rendering ───────────────────── */
+
 function addMessage(text, isUser = false) {
     const chatMessages = document.getElementById('chatMessages');
     const messageEl = document.createElement('div');
@@ -59,12 +56,11 @@ function addMessage(text, isUser = false) {
                 <div class="bg-gradient-to-r from-[var(--gradient-start)] to-[var(--gradient-end)] rounded-2xl rounded-tr-none p-3.5 text-[15px] max-w-[85%] shadow-sm">
                     <p class="text-white">${escapeHtml(text)}</p>
                 </div>
-                <div class="w-8 h-8 rounded-lg bg-[var(--bg-elevated)] flex items-center justify-center flex-shrink-0 font-bold text-sm shadow-sm mt-1 border border-[var(--border)]">
-                    U
-                </div>
             </div>
         `;
     } else {
+        const htmlContent = safeMarkdownAndLatex(text);
+
         messageEl.innerHTML = `
             <div class="flex gap-3">
                 <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-[var(--gradient-start)] to-[var(--gradient-end)] flex items-center justify-center flex-shrink-0 shadow-sm mt-1">
@@ -75,7 +71,7 @@ function addMessage(text, isUser = false) {
                 <div class="flex-1">
                     <div class="bg-[var(--bg-card)] border border-[var(--border)] rounded-2xl rounded-tl-none p-4 text-[15px] shadow-sm leading-relaxed overflow-hidden">
                         <div class="markdown-body text-[var(--fg-primary)]" style="word-wrap: break-word;">
-                            ${typeof marked !== 'undefined' ? marked.parse(text) : escapeHtml(text)}
+                            ${htmlContent}
                         </div>
                     </div>
                 </div>
@@ -87,10 +83,120 @@ function addMessage(text, isUser = false) {
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
+/* ─────────────── LaTeX + Markdown Processing ─────────────── */
+
 /**
- * Hiển thị typing indicator.
- * @returns {HTMLElement} Element typing indicator (để remove sau)
+ * Render 1 đoạn LaTeX thành HTML bằng KaTeX.
+ *
+ * @param {string}  latex       - Nội dung LaTeX (không bao gồm delimiters)
+ * @param {boolean} displayMode - true = block ($$...$$), false = inline ($...$)
+ * @returns {string} HTML string
  */
+function renderLatexToHtml(latex, displayMode) {
+    if (typeof katex === 'undefined') {
+        const tag = displayMode ? 'div' : 'span';
+        return `<${tag} class="katex-fallback">${escapeHtml(displayMode ? `$$${latex}$$` : `$${latex}$`)}</${tag}>`;
+    }
+
+    try {
+        return katex.renderToString(latex.trim(), {
+            displayMode,
+            throwOnError: false,
+            trust: true,
+            strict: false,
+            output: 'html',
+        });
+    } catch (err) {
+        console.warn('[Chat] KaTeX error:', err.message, '| LaTeX:', latex);
+        const tag = displayMode ? 'div' : 'span';
+        return `<${tag} class="katex-error" title="${escapeHtml(err.message)}">${escapeHtml(latex)}</${tag}>`;
+    }
+}
+
+/**
+ * Xử lý an toàn: Markdown + LaTeX KHÔNG xung đột.
+ *
+ * Luồng:
+ * 1. Chuẩn hóa delimiters (\[...\] → $$...$$, \(...\) → $...$)
+ * 2. Trích LaTeX → render ngay bằng katex.renderToString()
+ *    Lưu HTML vào mảng, thay bằng PLAIN-TEXT placeholder
+ *    (marked sẽ không bao giờ biến đổi chuỗi text thuần này)
+ * 3. Markdown parse bằng marked.parse(text, options)
+ *    — Dùng API mới, tương thích marked v4 lẫn v5+
+ *    — KHÔNG gọi marked.setOptions() vì v5+ đã deprecate/xoá
+ * 4. Khôi phục rendered HTML:
+ *    — Xử lý cả trường hợp marked bọc placeholder vào <p>...</p>
+ */
+function safeMarkdownAndLatex(text) {
+    if (!text) return '';
+
+    let processed = text;
+    const renderedBlocks = [];
+
+    // ─── Bước 1: Chuẩn hóa delimiters ───
+    processed = processed.replace(/\\\[([\s\S]*?)\\\]/g, (_, inner) => `$$${inner}$$`);
+    processed = processed.replace(/\\\(([\s\S]*?)\\\)/g, (_, inner) => `$${inner}$`);
+
+    // ─── Bước 2: Trích xuất + render LaTeX → plain-text placeholder ───
+
+    // 2a. Display math: $$...$$ (nhiều dòng OK)
+    processed = processed.replace(/\$\$([\s\S]*?)\$\$/g, (_, latex) => {
+        const id = renderedBlocks.length;
+        renderedBlocks.push(renderLatexToHtml(latex, true));
+        return `\n\nLATEXBLOCK${id}ENDMATH\n\n`;
+    });
+
+    // 2b. Inline math: $...$ (không chứa newline)
+    processed = processed.replace(/\$([^\$\n]+?)\$/g, (_, latex) => {
+        const id = renderedBlocks.length;
+        renderedBlocks.push(renderLatexToHtml(latex, false));
+        return `LATEXINLINE${id}ENDMATH`;
+    });
+
+    // ─── Bước 3: Markdown parse ───
+    // Dùng marked.parse(text, options) — tương thích marked v4 & v5+
+    // KHÔNG dùng marked.setOptions() vì v5+ đã bỏ API này
+    let html;
+    try {
+        if (typeof marked !== 'undefined') {
+            html = marked.parse(processed, {
+                breaks: true,
+                gfm: true,
+            });
+        } else {
+            html = escapeHtml(processed).replace(/\n/g, '<br>');
+        }
+    } catch (e) {
+        console.error('[Chat] Markdown parse error:', e);
+        html = escapeHtml(processed).replace(/\n/g, '<br>');
+    }
+
+    // ─── Bước 4: Khôi phục rendered LaTeX HTML ───
+
+    // Display: marked thường bọc thành <p>LATEXBLOCK0ENDMATH</p>
+    // → thay cả thẻ <p> để tránh block element nằm trong inline context
+    html = html.replace(/<p>\s*LATEXBLOCK(\d+)ENDMATH\s*<\/p>/g, (_, idStr) => {
+        const id = parseInt(idStr, 10);
+        return id < renderedBlocks.length ? renderedBlocks[id] : '';
+    });
+
+    // Fallback: placeholder không bị bọc <p> (vd: nằm trong <li>, <blockquote>...)
+    html = html.replace(/LATEXBLOCK(\d+)ENDMATH/g, (_, idStr) => {
+        const id = parseInt(idStr, 10);
+        return id < renderedBlocks.length ? renderedBlocks[id] : '';
+    });
+
+    // Inline math
+    html = html.replace(/LATEXINLINE(\d+)ENDMATH/g, (_, idStr) => {
+        const id = parseInt(idStr, 10);
+        return id < renderedBlocks.length ? renderedBlocks[id] : '';
+    });
+
+    return html;
+}
+
+/* ───────────────────── Typing Indicator ───────────────────── */
+
 function showTypingIndicator() {
     const chatMessages = document.getElementById('chatMessages');
     const typingEl = document.createElement('div');
@@ -116,20 +222,14 @@ function showTypingIndicator() {
     return typingEl;
 }
 
-/**
- * Tính độ tương tự giữa 2 chuỗi (0-1)
- */
+/* ───────────────────── Related Videos ───────────────────── */
+
 function calculateSimilarity(str1, str2) {
-    const s1 = (str1 || "").normalize('NFC').toLowerCase().trim();
-    const s2 = (str2 || "").normalize('NFC').toLowerCase().trim();
-    
-    // Exact match
+    const s1 = str1.toLowerCase().trim();
+    const s2 = str2.toLowerCase().trim();
     if (s1 === s2) return 1;
-    
-    // Substring match
     if (s1.includes(s2) || s2.includes(s1)) return 0.9;
-    
-    // Levenshtein distance (đơn giản)
+
     let matched = 0;
     const minLen = Math.min(s1.length, s2.length);
     for (let i = 0; i < minLen; i++) {
@@ -138,10 +238,6 @@ function calculateSimilarity(str1, str2) {
     return matched / Math.max(s1.length, s2.length);
 }
 
-/**
- * Hiển thị related videos/sources từ RAG.
- * @param {Array<{video_title: string, timestamp: string, filename: string, content_snippet: string}>} sources
- */
 function renderRelatedVideos(sources) {
     if (!sources || sources.length === 0) return;
 
@@ -152,7 +248,10 @@ function renderRelatedVideos(sources) {
     list.innerHTML = sources
         .map(
             (source) => `
-        <div class="video-suggestion group flex items-start gap-3 p-2.5 hover:bg-[var(--bg-elevated)] rounded-xl cursor-pointer transition-colors border border-transparent hover:border-[var(--border)]" data-timestamp="${source.timestamp}" data-video-title="${escapeHtml(source.video_title || '')}" data-filename="${escapeHtml(source.filename || '')}">
+        <div class="video-suggestion group flex items-start gap-3 p-2.5 hover:bg-[var(--bg-elevated)] rounded-xl cursor-pointer transition-colors border border-transparent hover:border-[var(--border)]"
+             data-timestamp="${source.timestamp}"
+             data-video-title="${escapeHtml(source.video_title || '')}"
+             data-filename="${escapeHtml(source.filename || '')}">
             <div class="w-7 h-7 rounded-lg flex items-center justify-center bg-[var(--accent-dim)] text-[var(--accent)] mt-0.5 flex-shrink-0">
                 <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
                     <polygon points="5 3 19 12 5 21 5 3"></polygon>
@@ -161,7 +260,8 @@ function renderRelatedVideos(sources) {
             <div class="flex-1 min-w-0">
                 <h4 class="text-[13px] font-medium leading-snug group-hover:text-[var(--accent)] transition-colors line-clamp-2">${escapeHtml(source.video_title)}</h4>
                 <div class="text-[11px] text-[var(--fg-muted)] mt-1.5 flex items-center gap-1.5">
-                    Mốc thời gian: <span class="text-[var(--accent)] bg-[var(--accent-dim)] px-1.5 py-0.5 rounded font-mono">${source.timestamp}</span>
+                    Mốc thời gian:
+                    <span class="text-[var(--accent)] bg-[var(--accent-dim)] px-1.5 py-0.5 rounded font-mono">${source.timestamp}</span>
                 </div>
             </div>
         </div>
@@ -169,18 +269,17 @@ function renderRelatedVideos(sources) {
         )
         .join('');
 
-    // Click vào source → tìm video tương ứng bằng fuzzy match
     list.querySelectorAll('.video-suggestion').forEach((el) => {
         el.addEventListener('click', () => {
             const timeStr = el.dataset.timestamp;
             const targetVideoTitle = el.dataset.videoTitle;
             const targetFilename = el.dataset.filename;
-            
+
             if (!timeStr) {
-                console.warn('[Chat] Missing timestamp in video source');
+                console.warn('[Chat] Missing timestamp');
                 return;
             }
-            
+
             const [mins, secs] = timeStr.split(':').map(Number);
             const seconds = mins * 60 + (secs || 0);
 
@@ -191,160 +290,98 @@ function renderRelatedVideos(sources) {
 
             const videoItems = document.querySelectorAll('.video-item');
             if (videoItems.length === 0) {
-                console.warn('[Chat] No videos found in playlist');
+                console.warn('[Chat] No videos found');
                 return;
             }
 
             let foundItem = null;
+            let bestScore = 0;
 
-            // 1. Tìm video item khớp CHÍNH XÁC filename (với chuẩn hóa Unicode NFC)
-            const targetNorm = targetFilename.normalize('NFC').toLowerCase();
-            const targetTitleNorm = targetVideoTitle.normalize('NFC').toLowerCase();
-
-            for (const item of videoItems) {
-                const itemFilename = (item.dataset.filename || "").normalize('NFC').toLowerCase();
-                const itemTitle = (item.querySelector('h4').textContent || "").trim().normalize('NFC').toLowerCase();
-                
-                // Ưu tiên khớp theo filename
-                if (itemFilename && itemFilename === targetNorm) {
-                    foundItem = item;
-                    break;
-                }
-                
-                // Nếu chưa tìm thấy, lưu lại item khớp theo tiêu đề (title) như một phương án dự phòng
-                if (!foundItem && itemTitle === targetTitleNorm) {
-                    foundItem = item;
+            // Ưu tiên tìm theo filename (chính xác hơn)
+            if (targetFilename) {
+                for (const item of videoItems) {
+                    const itemFilename = item.dataset.filename;
+                    if (itemFilename && itemFilename.toLowerCase() === targetFilename.toLowerCase()) {
+                        foundItem = item;
+                        break;
+                    }
                 }
             }
 
-            if (!foundItem) {
-                console.log(`[Chat] Exact match failed for ${targetFilename}, trying fuzzy match...`);
-            }
-
-            // Strategy 2: Fuzzy title match (nếu chưa tìm được)
+            // Fallback: tìm theo title similarity
             if (!foundItem && targetVideoTitle) {
-                let bestScore = 0;
                 for (const item of videoItems) {
                     const itemTitle = item.querySelector('h4')?.textContent.trim() || '';
                     const score = calculateSimilarity(targetVideoTitle, itemTitle);
-                    
                     if (score > bestScore) {
                         bestScore = score;
                         foundItem = item;
                     }
                 }
-                
-                if (bestScore > 0.5) {
-                    const matchedTitle = foundItem.querySelector('h4').textContent.trim();
-                    console.log(`[Chat] Found video by fuzzy match (score: ${bestScore.toFixed(2)}): "${targetVideoTitle}" → "${matchedTitle}"`);
-                } else {
-                    foundItem = null;
-                }
+                if (bestScore <= 0.5) foundItem = null;
             }
 
             if (!foundItem) {
-                console.warn(`[Chat] Video not found - title: "${targetVideoTitle}", filename: "${targetFilename}"`);
-                console.warn('[Chat] Available videos:', Array.from(videoItems).map(v => v.querySelector('h4').textContent.trim()).slice(0, 5), '...');
+                console.warn(`[Chat] Video not found: "${targetVideoTitle}"`);
                 return;
             }
 
-            console.log(`[Chat] Loading video: ${foundItem.querySelector('h4').textContent.trim()}`);
-
-            // ✅ Tự load video thay vì gọi click() (vì click() có thể không trigger event listener)
-            const videoId = parseInt(foundItem.dataset.videoId, 10);
             const videoTitle = foundItem.querySelector('h4').textContent;
             const filename = foundItem.dataset.filename;
 
-            // Highlight video item
             document.querySelectorAll('.video-item').forEach((v) => v.classList.remove('active'));
             foundItem.classList.add('active');
-
-            // Update UI title
             document.getElementById('videoTitle').textContent = videoTitle;
 
-            // Mở rộng chương chứa video (Accordion)
-            const chapterItem = foundItem.closest('.chapter-item');
-            if (chapterItem && !chapterItem.classList.contains('open')) {
-                const header = chapterItem.querySelector('.chapter-header');
-                if (header) header.click();
-            }
-
-            // Scroll tới video
-            foundItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-
-            // ★ Đổi nguồn video player ★
             if (filename && videoPlayer) {
                 const video = videoPlayer.getVideo();
                 const encodedFilename = encodeURIComponent(filename);
-                
-                console.log(`[Chat] Setting video src: /videos/${encodedFilename}`);
                 video.src = `/videos/${encodedFilename}`;
                 video.load();
 
-                // Chờ video load metadata rồi mới seek
                 const playVideo = () => {
-                    console.log(`[Chat] Video loaded, seeking to ${mins}:${String(secs).padStart(2, '0')}`);
                     video.currentTime = seconds;
                     video.play().catch((err) => {
-                        console.warn('[Chat] Auto-play bị chặn bởi browser policy:', err);
+                        console.warn('[Chat] Auto-play blocked:', err);
                     });
                 };
 
-                // Nếu video đã load sẵn metadata, seek ngay lập tức
-                if (video.readyState >= 1) { // HAVE_METADATA hoặc cao hơn
+                if (video.readyState >= 1) {
                     playVideo();
                 } else {
-                    // Nếu chưa load, đợi loadedmetadata event
-                    const onLoadedMetaData = () => {
-                        playVideo();
-                        video.removeEventListener('loadedmetadata', onLoadedMetaData);
-                    };
-                    video.addEventListener('loadedmetadata', onLoadedMetaData, { once: true });
+                    video.addEventListener('loadedmetadata', playVideo, { once: true });
                 }
-            } else {
-                console.warn('[Chat] Video player not available or no filename');
             }
         });
     });
 }
 
-/**
- * Xử lý gửi tin nhắn chat — Async.
- */
+/* ───────────────────── Chat Handler ───────────────────── */
+
 async function handleChat() {
     const chatInput = document.getElementById('chatInput');
     const query = chatInput.value.trim();
     if (!query) return;
 
-    // Hiển thị tin nhắn người dùng
     addMessage(query, true);
     chatInput.value = '';
 
-    // Hiển thị typing indicator
     const typingEl = showTypingIndicator();
 
     try {
-        // ★ Gọi REST API bằng async/await ★
         const response = await apiClient.sendChat(query);
-
-        // Xóa typing indicator
         typingEl.remove();
-
-        // Hiển thị câu trả lời
         addMessage(response.answer);
-
-        // Hiển thị related videos
         renderRelatedVideos(response.sources);
     } catch (error) {
         typingEl.remove();
-        addMessage('❌ Có lỗi xảy ra khi kết nối server. Vui lòng thử lại.');
+        addMessage('Có lỗi xảy ra khi kết nối server. Vui lòng thử lại.');
         console.error('[Chat] Error:', error);
     }
 }
 
-/**
- * Tránh XSS khi hiển thị user input.
- */
+/* ───────────────────── Utilities ───────────────────── */
+
 function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;

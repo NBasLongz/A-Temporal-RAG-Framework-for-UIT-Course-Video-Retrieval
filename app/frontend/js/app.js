@@ -138,6 +138,9 @@ async function initApp() {
             video.load();
             document.getElementById('videoTitle').textContent = firstVideo.title;
         }
+
+        // 6. Init search sau khi chapters đã render
+        initSearch();
     } catch (error) {
         console.error('[VideoLearn] Failed to load chapters:', error);
         document.getElementById('chapterList').innerHTML = `
@@ -151,6 +154,106 @@ async function initApp() {
     console.log('[VideoLearn] Ready!');
 }
 
+// ==================== Search ====================
+
+function initSearch() {
+    const searchInput = document.getElementById('searchInput');
+    if (!searchInput) return;
+
+    let debounceTimer = null;
+
+    searchInput.addEventListener('input', () => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+            const query = searchInput.value.trim().toLowerCase();
+            filterVideos(query);
+        }, 200); // debounce 200ms
+    });
+
+    // Clear search khi nhấn Escape
+    searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            searchInput.value = '';
+            filterVideos('');
+            searchInput.blur();
+        }
+    });
+}
+
+function filterVideos(query) {
+    const chapters = document.querySelectorAll('.chapter-item');
+
+    if (!query) {
+        // Reset: hiện tất cả
+        chapters.forEach((chapter) => {
+            chapter.classList.remove('search-hidden');
+            chapter.querySelectorAll('.video-item').forEach((item) => {
+                item.classList.remove('search-hidden');
+                // Restore original title (xóa highlight)
+                const h4 = item.querySelector('h4');
+                if (h4 && h4.dataset.originalTitle) {
+                    h4.textContent = h4.dataset.originalTitle;
+                }
+            });
+        });
+        return;
+    }
+
+    // Tách từ khóa search thành các token
+    const tokens = query.split(/\s+/).filter(Boolean);
+
+    chapters.forEach((chapter) => {
+        let chapterHasMatch = false;
+
+        chapter.querySelectorAll('.video-item').forEach((item) => {
+            const h4 = item.querySelector('h4');
+            if (!h4) return;
+
+            // Lưu title gốc lần đầu
+            if (!h4.dataset.originalTitle) {
+                h4.dataset.originalTitle = h4.textContent;
+            }
+
+            const originalTitle = h4.dataset.originalTitle;
+            const titleLower = originalTitle.toLowerCase();
+
+            // Check nếu tất cả token đều match
+            const allMatch = tokens.every((token) => titleLower.includes(token));
+
+            if (allMatch) {
+                item.classList.remove('search-hidden');
+                chapterHasMatch = true;
+
+                // Highlight matched text
+                let highlightedTitle = originalTitle;
+                tokens.forEach((token) => {
+                    const regex = new RegExp(`(${escapeRegex(token)})`, 'gi');
+                    highlightedTitle = highlightedTitle.replace(regex, '<span class="search-highlight">$1</span>');
+                });
+                h4.innerHTML = highlightedTitle;
+            } else {
+                item.classList.add('search-hidden');
+                h4.textContent = originalTitle;
+            }
+        });
+
+        if (chapterHasMatch) {
+            chapter.classList.remove('search-hidden');
+            // Tự động mở chapter có kết quả
+            chapter.classList.add('open');
+            const content = chapter.querySelector('.chapter-content');
+            if (content) content.classList.add('open');
+        } else {
+            chapter.classList.add('search-hidden');
+        }
+    });
+}
+
+function escapeRegex(str) {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 // ==================== Start App ====================
 
 document.addEventListener('DOMContentLoaded', initApp);
+

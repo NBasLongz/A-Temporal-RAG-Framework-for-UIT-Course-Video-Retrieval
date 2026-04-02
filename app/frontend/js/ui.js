@@ -161,23 +161,41 @@ export function initTranscript(playerRef) {
     const transcriptPanel = document.getElementById('transcriptPanel');
     const notesPanel = document.getElementById('notesPanel');
 
-    let isLoaded = false;
+    let loadedTranscriptVideoId = null;
 
     transcriptBtn.addEventListener('click', async () => {
         transcriptPanel.classList.toggle('hidden');
         notesPanel.classList.add('hidden');
 
-        // Load transcript lần đầu từ API
-        if (!isLoaded && !transcriptPanel.classList.contains('hidden')) {
+        // Load transcript nếu panel đang mở và chưa load cho video hiện tại
+        if (!transcriptPanel.classList.contains('hidden') && loadedTranscriptVideoId !== currentVideoId) {
+            
+            // Hiện loading
+            document.getElementById('transcriptContent').innerHTML = `
+                <div class="flex items-center justify-center py-8 gap-2">
+                    <span class="w-2 h-2 bg-[var(--accent)] rounded-full animate-bounce"></span>
+                    <span class="w-2 h-2 bg-[var(--accent)] rounded-full animate-bounce" style="animation-delay: 0.1s"></span>
+                    <span class="w-2 h-2 bg-[var(--accent)] rounded-full animate-bounce" style="animation-delay: 0.2s"></span>
+                </div>
+            `;
+            
             try {
-                // ★ Gọi REST API bằng async/await ★
+                // Gọi REST API
                 const items = await apiClient.fetchTranscript(currentVideoId);
-                renderTranscript(items, playerRef);
-                isLoaded = true;
+                
+                if (!items || items.length === 0) {
+                    document.getElementById('transcriptContent').innerHTML = `
+                        <p class="text-[var(--fg-muted)] text-center py-4 text-sm">Chưa có phụ đề cho video này.</p>
+                    `;
+                } else {
+                    renderTranscript(items, playerRef);
+                }
+                
+                loadedTranscriptVideoId = currentVideoId;
             } catch (error) {
                 console.error('[Transcript] Error:', error);
                 document.getElementById('transcriptContent').innerHTML = `
-                    <p class="text-[var(--fg-muted)] py-4">❌ Không thể tải phụ đề.</p>
+                    <p class="text-[var(--fg-muted)] py-4 text-center">❌ Không thể tải phụ đề.</p>
                 `;
             }
         }
