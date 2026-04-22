@@ -38,5 +38,6 @@ data/videos/
 videos/
 notebooks/
 
+gradio_ui/
 **/gradio_app.py
 
