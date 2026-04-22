@@ -11,6 +11,9 @@ from .utils import empty_sources_dataframe
 
 @dataclass(slots=True)
 class GradioComponents:
+    login_toggle_btn: gr.Button
+    auth_panel: gr.Column
+    auth_close_btn: gr.Button
     auth_email: gr.Textbox
     auth_password: gr.Textbox
     login_btn: gr.Button
@@ -33,10 +36,14 @@ def build_interface_shell() -> tuple[gr.Blocks, GradioComponents]:
         gr.HTML(HEADER_HTML)
 
         with gr.Column(elem_classes=["main-content"]):
-            with gr.Row(equal_height=True, elem_classes=["main-row"]):
+            with gr.Row(elem_classes=["top-actions"]):
+                login_toggle_btn = gr.Button("Login", size="sm", elem_classes=["login-toggle-btn"])
+
+            with gr.Row(elem_classes=["main-row"]):
                 with gr.Column(scale=1):
-                    with gr.Column(elem_classes=["card", "auth-card"]):
+                    with gr.Column(visible=False, elem_classes=["card", "auth-card"],) as auth_panel:
                         gr.HTML('<div class="section-label"><span class="dot dot-rose"></span>Login</div>')
+                        auth_close_btn = gr.Button("Close", size="sm", elem_classes=["sort-btn"])
                         auth_email = gr.Textbox(
                             label="Email",
                             placeholder="you@example.com",
@@ -64,8 +71,8 @@ def build_interface_shell() -> tuple[gr.Blocks, GradioComponents]:
                             lines=1,
                             show_label=False,
                         )
-                        status_output = gr.Markdown(QUERY_DEFAULT_STATUS, elem_classes=["status-markdown"])
                         submit_btn = gr.Button("Search", variant="primary", elem_classes=["search-btn"])
+                        status_output = gr.Markdown(QUERY_DEFAULT_STATUS, elem_classes=["status-markdown"])
 
                     with gr.Column(elem_classes=["card"]):
                         gr.HTML('<div class="section-label"><span class="dot dot-cyan"></span>Answer</div>')
@@ -103,6 +110,9 @@ def build_interface_shell() -> tuple[gr.Blocks, GradioComponents]:
         gr.HTML(FOOTER_HTML)
 
     components = GradioComponents(
+        login_toggle_btn=login_toggle_btn,
+        auth_panel=auth_panel,
+        auth_close_btn=auth_close_btn,
         auth_email=auth_email,
         auth_password=auth_password,
         login_btn=login_btn,

@@ -6,16 +6,26 @@ import gradio as gr
 
 from .components import GradioComponents, build_interface_shell
 from .config import DEFAULT_PORT, MAX_PORT_ATTEMPTS
-from .handlers import handle_login, handle_logout, handle_query, handle_reset_sources, handle_sort_sources
+from .handlers import handle_login, handle_logout, handle_query, handle_reset_sources, handle_sort_sources, hide_login_form, show_login_form
 from .styles import CUSTOM_CSS
 from .utils import play_selected_video
 
 
 def bind_events(components: GradioComponents) -> None:
+    components.login_toggle_btn.click(
+        fn=show_login_form,
+        inputs=[],
+        outputs=[components.auth_panel],
+    )
+    components.auth_close_btn.click(
+        fn=hide_login_form,
+        inputs=[],
+        outputs=[components.auth_panel],
+    )
     components.login_btn.click(
         fn=handle_login,
         inputs=[components.auth_email, components.auth_password],
-        outputs=[components.auth_status, components.auth_state, components.auth_password],
+        outputs=[components.auth_status, components.auth_state, components.auth_password, components.auth_panel],
     )
     components.logout_btn.click(
         fn=handle_logout,

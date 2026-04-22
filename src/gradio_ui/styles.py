@@ -105,6 +105,7 @@ body, .gradio-container {
 .main-row {
   gap: 24px !important;
   width: 100%;
+  align-items: flex-start !important;
 }
 
 .card {
@@ -121,6 +122,31 @@ body, .gradio-container {
 .card:hover {
   box-shadow: var(--shadow-lg) !important;
   border-color: #d8daf0 !important;
+}
+
+.top-actions {
+  margin: 0 0 14px 0;
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+.login-toggle-btn {
+  background: rgba(108, 92, 231, 0.12) !important;
+  color: var(--accent) !important;
+  border: 1px solid rgba(108, 92, 231, 0.22) !important;
+  border-radius: 999px !important;
+  padding: 6px 12px !important;
+  min-height: 30px !important;
+  font-size: 0.78rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.04em !important;
+  text-transform: uppercase !important;
+}
+
+.login-toggle-btn:hover {
+  background: rgba(108, 92, 231, 0.18) !important;
+  transform: translateY(-1px) !important;
 }
 
 .auth-card {
@@ -213,6 +239,12 @@ body, .gradio-container {
 .sort-btn {
   background: var(--bg-subtle) !important;
   color: var(--text-body) !important;
+}
+
+.status-markdown {
+  margin-top: 10px !important;
+  padding-left: 4px !important;
+  line-height: 1.35 !important;
 }
 
 .response-area {
@@ -349,7 +381,4 @@ AUTH_DEFAULT_STATUS = (
     "<span style='font-size:0.8rem; color:#8b8faa;'>Not signed in. Use your email and password to get a token.</span>"
 )
 
-QUERY_DEFAULT_STATUS = (
-    "<span style='font-size:0.75rem; color:#8b8faa; display:inline-block; margin-top:-10px; margin-bottom:10px; padding-left:4px;'>"
-    "LLM calls: 0 | Guardrail: N/A</span>"
-)
+QUERY_DEFAULT_STATUS = "LLM calls: 0 | Guardrail: N/A"

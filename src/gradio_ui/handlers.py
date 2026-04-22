@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pandas as pd
+import gradio as gr
 
 from .api_client import BackendClient
 from .styles import AUTH_DEFAULT_STATUS, QUERY_DEFAULT_STATUS
@@ -18,6 +19,14 @@ def build_query_status(llm_calls: int, guardrail_result: str | None) -> str:
     )
 
 
+def show_login_form():
+    return gr.update(visible=True)
+
+
+def hide_login_form():
+    return gr.update(visible=False)
+
+
 async def handle_login(email: str, password: str):
     result = await client.login(email, password)
     auth_state = {"access_token": None, "email": None}
@@ -25,7 +34,8 @@ async def handle_login(email: str, password: str):
     if result.ok:
         auth_state = {"access_token": result.token, "email": result.email}
 
-    return result.message, auth_state, ""
+    auth_panel_update = gr.update(visible=False) if result.ok else gr.update(visible=True)
+    return result.message, auth_state, "", auth_panel_update
 
 
 async def handle_logout():
