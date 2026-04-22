@@ -41,13 +41,25 @@ async def lifespan(app: FastAPI):
 
 
     # This runs when the server starts
-    async with engine.begin() as conn:
-        # Create all tables defined in your models
-        await conn.run_sync(Base.metadata.create_all)
-    
-    async with AsyncSession(engine) as session:
-        # Optionally seed the database with initial data if it's empty
-        await seed_db_if_empty(session)
+    max_retries = 3
+    retry_delay = 5
+    for attempt in range(max_retries):
+        try:
+            async with engine.begin() as conn:
+                # Create all tables defined in your models
+                await conn.run_sync(Base.metadata.create_all)
+            
+            async with AsyncSession(engine) as session:
+                # Optionally seed the database with initial data if it's empty
+                await seed_db_if_empty(session)
+            break
+        except Exception as e:
+            if attempt < max_retries - 1:
+                logger.warning(f"Database connection failed (attempt {attempt + 1}/{max_retries}): {e}. Retrying in {retry_delay}s...")
+                await asyncio.sleep(retry_delay)
+            else:
+                logger.error(f"Failed to connect to the database after {max_retries} attempts.")
+                raise e
  
     await seed_vector_db_if_empty() # Async func
 
