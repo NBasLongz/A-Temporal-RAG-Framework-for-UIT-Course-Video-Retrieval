@@ -181,8 +181,22 @@ class AgenticRagService:
         }
 
     async def ask_streaming(self, query: str, model: Optional[str] = None) -> AsyncGenerator[str, None]:
-        # Main method to handle user query and return answer
-        pass
+        """Stream the final answer for a query in fixed-size text chunks.
+
+        The current graph produces the answer as a complete response, so this
+        method awaits the graph execution first and then yields the answer in
+        order-preserving chunks. This keeps the public API streaming-friendly
+        without changing the graph nodes yet.
+        """
+        result = await self._execute_graph(query, model)
+
+        answer = result.get("answer", "")
+        if not answer:
+            return
+
+        chunk_size = 256
+        for start in range(0, len(answer), chunk_size):
+            yield answer[start : start + chunk_size]
 
     def _extract_answer(self, result: dict) -> str:
         messages = result.get("messages", [])

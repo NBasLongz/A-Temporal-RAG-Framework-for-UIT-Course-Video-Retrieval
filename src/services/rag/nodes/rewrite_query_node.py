@@ -19,15 +19,8 @@ async def invoke_query_rewrite(state: ThreadState, runtime: Runtime[Context]) ->
     logger.info("NODE: query_rewrite")
     query = state.get("original_query")
     
-    # Setup feedback loop data if iterating
-    prev_rewrite = state.get("rewritten_query", [])[-1] if state.get("rewritten_query") else "N/A"
-    last_grade = state.get("answer_grade")[-1] if state.get("answer_grade") else None
-    
     prompt = query_rewrite_prompt.format(
         query=query,
-        previous_refined_query=prev_rewrite,
-        suggestion=getattr(last_grade, 'suggestion', 'N/A'),
-        reasoning=getattr(last_grade, 'reasoning', 'N/A')
     )
     
     llm = ChatGoogleGenerativeAI(model=runtime.context.llm_model, temperature=runtime.context.temperature)

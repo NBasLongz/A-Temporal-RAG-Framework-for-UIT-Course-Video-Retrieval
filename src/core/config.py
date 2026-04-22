@@ -24,7 +24,7 @@ class Settings(BaseConfigSettings):
     environment: Literal["development", "staging", "production"] = "development"
     service_name: str = "rag-api"
 
-    # Default values match what we mapped in compose.yaml
+    # Default values match if not provided in .env
     POSTGRES_USER: str = "myuser"
     POSTGRES_PASSWORD: str = "mypassword"
     POSTGRES_HOST: str = "localhost"
