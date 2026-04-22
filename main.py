@@ -4,10 +4,14 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+
 from src.api.users import router as users_router
 from src.api.videos import router as videos_router
 from src.api.chunks import router as chunks_router
 from src.api.agentic_ask import router as agentic_ask_router
+from src.api.auth import router as auth_router
 
 from contextlib import asynccontextmanager
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,6 +24,7 @@ from src.services.rag.bm25 import make_bm25_retriever
 from src.services.rag.vectordb import make_vector_db_retriever
 from src.services.rag.factory import make_agentic_rag_service
 from src.core.config import get_settings
+from src.core.rate_limit import limiter
 
 
 from dotenv import load_dotenv
@@ -86,10 +91,16 @@ async def lifespan(app: FastAPI):
     app.state.rag_service = rag_service
     logging.info("Initialized Agentic RAG service and stored in app state.")
 
+    # Crate and store the Limiter in the app state for later use
+    logging.info("Initializing rate limiter...")
+    app.state.limiter = limiter
+
     yield
 
 app = FastAPI(lifespan=lifespan)
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
+app.include_router(auth_router)
 app.include_router(users_router)
 app.include_router(videos_router)
 app.include_router(chunks_router)

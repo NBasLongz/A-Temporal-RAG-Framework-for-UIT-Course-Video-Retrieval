@@ -23,4 +23,9 @@ dependencies = [
     "ragas>=0.4.3",
     "datasets>=4.8.4",
     "langfuse>=4.2.0",
+    "passlib>=1.7.4",
+    "bcrypt<4.1",
+    "pyjwt>=2.12.1",
+    "python-multipart>=0.0.22",
+    "slowapi>=0.1.9",
 ]
