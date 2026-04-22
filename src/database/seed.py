@@ -3,7 +3,7 @@ import os
 import pickle
 import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import inspect, select, text
 
 from src.models.video import Video
 from src.models.chunk import Chunk
@@ -14,6 +14,24 @@ import logging
 logger = logging.getLogger(__name__)
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "data")
+
+
+async def ensure_user_schema(session: AsyncSession):
+    async with session.bind.begin() as conn:
+        def _migrate(sync_conn):
+            inspector = inspect(sync_conn)
+            if not inspector.has_table("users"):
+                return
+
+            existing_columns = {column["name"] for column in inspector.get_columns("users")}
+            if "hashed_password" not in existing_columns:
+                sync_conn.execute(
+                    text(
+                        "ALTER TABLE users ADD COLUMN hashed_password VARCHAR(255) NOT NULL DEFAULT ''"
+                    )
+                )
+
+        await conn.run_sync(_migrate)
 
 async def seed_db_if_empty(session: AsyncSession):
     # Check if there's any data already

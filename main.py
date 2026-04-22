@@ -18,7 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database.session import engine
 from src.models.base import Base
-from src.database.seed import seed_db_if_empty, seed_vector_db_if_empty
+from src.database.seed import seed_db_if_empty, seed_vector_db_if_empty, ensure_user_schema
 
 from src.services.rag.bm25 import make_bm25_retriever
 from src.services.rag.vectordb import make_vector_db_retriever
@@ -55,6 +55,7 @@ async def lifespan(app: FastAPI):
                 await conn.run_sync(Base.metadata.create_all)
             
             async with AsyncSession(engine) as session:
+                await ensure_user_schema(session)
                 # Optionally seed the database with initial data if it's empty
                 await seed_db_if_empty(session)
             break
