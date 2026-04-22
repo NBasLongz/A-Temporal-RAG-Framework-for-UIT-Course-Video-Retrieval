@@ -3,6 +3,7 @@ import gradio as gr
 import httpx
 import unicodedata
 import socket
+import pandas as pd # Make sure pandas is imported at the top of your file!
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +28,9 @@ async def get_response(query: str):
             answer = data.get("answer", "No answer found.")
             sources = data.get("sources", [])
 
+            n_llm_calls = data.get("n_llm_calls", 0)
+            guardrail_result = data.get("guardrail_result", "")
+
             formatted_response = answer
             video_data = []
 
@@ -42,10 +46,16 @@ async def get_response(query: str):
                     time_display = f"{mins:02d}:{secs:02d}"
                     video_data.append([video_name, time_display, video_url])
 
-            return formatted_response, video_data
+            return formatted_response, video_data, n_llm_calls, guardrail_result
 
     except Exception as e:
         return f"Unexpected error: {str(e)}", []
+
+
+async def wrapped_get_response(q):
+    ans, val, calls, guard = await get_response(q)
+    status_html = f"<span style='font-size:0.75rem; color:#8b8faa; padding-left:5px;'>LLM calls: {calls} | Guardrail: {guard}</span>"
+    return ans, val, status_html, val  # Trả về val 2 lần (lần 1 cho DF hiện thị, lần 2 cho State ẩn)
 
 
 def play_selected_video(evt: gr.SelectData, source_data):
@@ -390,6 +400,18 @@ VIDEO_PLACEHOLDER = '''
 '''
 
 
+def sort_sources(df):
+    if df is None or len(df) == 0:
+        return df
+    
+    # df is typically passed as a pandas DataFrame or list of lists from Gradio Dataframe
+    if not isinstance(df, pd.DataFrame):
+        df = pd.DataFrame(df, columns=["Video", "Timestamp", "URL"])
+        
+    df_sorted = df.sort_values(by=["Video", "Timestamp"]).reset_index(drop=True)
+    return df_sorted
+
+
 def create_gradio_interface():
     theme = gr.themes.Default(
         primary_hue="purple",
@@ -419,6 +441,16 @@ def create_gradio_interface():
                             lines=1,
                             show_label=False,
                         )
+                        
+                        # --- THÊM STATE Ở ĐÂY ---
+                        sources_state = gr.State()
+                        
+                        # --- THÊM LẠI DÒNG NÀY ---
+                        status_output = gr.Markdown(
+                            "<span style='font-size:0.75rem; color:#8b8faa; display:inline-block; margin-top:-10px; margin-bottom:10px; padding-left:4px;'>LLM calls: 0 | Guardrail: N/A</span>",
+                            elem_classes=["status-markdown"]
+                        )
+                        
                         submit_btn = gr.Button(
                             "Search",
                             variant="primary",
@@ -443,7 +475,11 @@ def create_gradio_interface():
                         video_player = gr.HTML(value=VIDEO_PLACEHOLDER)
 
                     with gr.Column(elem_classes=["card"]):
-                        gr.HTML('<div class="section-label"><span class="dot dot-rose"></span>Sources - Click to play</div>')
+                        with gr.Row():
+                            gr.HTML('<div class="section-label" style="flex-grow: 1;"><span class="dot dot-rose"></span>Sources - Click to play</div>')
+                            reset_btn = gr.Button("↺ Reset", size="sm", elem_classes=["sort-btn"])
+                            sort_btn = gr.Button("↕ Sort", size="sm", elem_classes=["sort-btn"])
+
                         sources_df = gr.Dataframe(
                             headers=["Video", "Timestamp", "URL"],
                             datatype=["str", "str", "str"],
@@ -457,20 +493,33 @@ def create_gradio_interface():
         <div class="footer-line">Agentic RAG System v1.0</div>
         """)
 
+        # --- VÀ CẬP NHẬT GỌI HÀM MỚI ---
         submit_btn.click(
-            fn=get_response,
+            fn=wrapped_get_response,
             inputs=[query_input],
-            outputs=[response_output, sources_df],
+            outputs=[response_output, sources_df, status_output, sources_state],
         )
         query_input.submit(
-            fn=get_response,
+            fn=wrapped_get_response,
             inputs=[query_input],
-            outputs=[response_output, sources_df],
+            outputs=[response_output, sources_df, status_output, sources_state],
         )
         sources_df.select(
             fn=play_selected_video,
             inputs=[sources_df],
             outputs=[video_player]
+        )
+        sort_btn.click(
+            fn=sort_sources,
+            inputs=[sources_df],
+            outputs=[sources_df]
+        )
+        
+        # Phục hồi dữ liệu State khi click Reset:
+        reset_btn.click(
+            fn=lambda x: x,  # Hàm ẩn danh trả về nguyên kiện giá trị input (biến x)
+            inputs=[sources_state], 
+            outputs=[sources_df]
         )
 
     return interface
