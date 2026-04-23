@@ -43,6 +43,36 @@ services:
 
         - action: rebuild
           path: ./uv.lock
+
+  gradio:
+    build: .
+    restart: always
+    command: ["uv", "run", "python", "gradio_app.py"]
+    ports:
+      - "7861:7860"
+    environment:
+      API_BASE_URL: http://backend:8000
+      GRADIO_PORT: "7860"
+    env_file:
+      - .env
+    depends_on:
+      - backend
+    develop:
+      watch:
+        - action: sync
+          path: ./src
+          target: /app/src
+
+        - action: sync
+          path: ./gradio_app.py
+          target: /app/gradio_app.py
+
+        - action: rebuild
+          path: ./pyproject.toml
+
+        - action: rebuild
+          path: ./uv.lock
+
   db:
     image: postgres:16-alpine
     restart: always

@@ -14,7 +14,7 @@ async def ask_question(request: Request, question: str, rag_service: AgenticRAGD
     # In a real implementation, you would process the question and return an answer
 
     try:
-        results = await rag_service.ask(question)
+        results = await rag_service.ask(question, trace_user_id=str(current_user.id))
         
         return AgenticAskResponse(
             query=question,

@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+import os
 import socket
 
 import gradio as gr
 
 from .components import GradioComponents, build_interface_shell
-from .config import DEFAULT_PORT, MAX_PORT_ATTEMPTS
+from .config import DEFAULT_PORT, MAX_PORT_ATTEMPTS, GRADIO_PORT
 from .handlers import handle_login, handle_logout, handle_query, handle_reset_sources, handle_sort_sources, hide_login_form, show_login_form
 from .styles import CUSTOM_CSS
 from .utils import play_selected_video
@@ -79,7 +80,8 @@ def find_free_port(start_port: int = DEFAULT_PORT, max_attempts: int = MAX_PORT_
 
 def launch_app() -> None:
     demo = create_gradio_interface()
-    free_port = find_free_port()
+    env_port = GRADIO_PORT or os.getenv("PORT")
+    free_port = int(env_port) if env_port else find_free_port()
     theme = gr.themes.Default(
         primary_hue="purple",
         secondary_hue="sky",
