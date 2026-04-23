@@ -53,11 +53,11 @@ def format_context(documents: List[Document]) -> str:
     """
     context = ""
 
-    for i, res in enumerate(documents, 1):
-      context += f"##Document {i}\n"
-      context += f"###Video: {res.metadata.get('video_name')}\n"
-      context += f"###At Timestamp: {res.metadata.get('timestamp')}\n"
-      context += f"{res.page_content}\n"
+    for res in documents:
+        context += "---\n"
+        context += f"Video: {res.metadata.get('video_name')}\n"
+        context += f"Timestamp: {res.metadata.get('timestamp')}\n"
+        context += f"{res.page_content}\n"
     return context
 
 def filter_messages(messages: List, n: int = None) -> List[HumanMessage | AIMessage]:

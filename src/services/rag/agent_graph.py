@@ -150,7 +150,7 @@ class AgenticRagService:
 
         with langfuse.start_as_current_observation(as_type="span", name="langchain-call"):
             # Propagate session_id to all observations
-            with propagate_attributes(session_id=str(uuid.uuid4()), user_id=user_id_for_trace):
+            with propagate_attributes(session_id=str(uuid.uuid4()), user_id=user_id_for_trace, trace_name="rag-trace"):
 
                 result = await self.graph.ainvoke(
                                     inital_state,
