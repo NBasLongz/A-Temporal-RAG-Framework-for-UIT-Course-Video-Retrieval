@@ -45,7 +45,7 @@ def bind_events(components: GradioComponents) -> None:
     )
     components.sources_df.select(
         fn=play_selected_video,
-        inputs=None,
+        inputs=[components.sources_df],
         outputs=[components.video_player],
     )
     components.sort_btn.click(

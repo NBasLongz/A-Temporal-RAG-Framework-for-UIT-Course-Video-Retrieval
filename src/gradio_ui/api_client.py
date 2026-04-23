@@ -24,6 +24,9 @@ class AskResult:
     sources: list[dict[str, Any]] | None = None
     n_llm_calls: int = 0
     guardrail_result: str | None = None
+    rate_limit_remaining: int | None = None
+    rate_limit_reset: str | None = None
+    retry_after: str | None = None
 
 
 class BackendClient:
@@ -81,4 +84,16 @@ class BackendClient:
             sources=data.get("sources", []),
             n_llm_calls=data.get("n_llm_calls", 0),
             guardrail_result=data.get("guardrail_result"),
+            rate_limit_remaining=_to_int(response.headers.get("X-RateLimit-Remaining")),
+            rate_limit_reset=response.headers.get("X-RateLimit-Reset"),
+            retry_after=response.headers.get("Retry-After"),
         )
+
+
+def _to_int(value: str | None) -> int | None:
+    if value is None:
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None

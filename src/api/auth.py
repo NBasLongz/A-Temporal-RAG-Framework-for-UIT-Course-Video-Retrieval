@@ -26,5 +26,5 @@ async def login_access_token(
     elif not user.is_active:
         raise HTTPException(status_code=400, detail="Inactive user")
     
-    access_token = create_access_token(subject=user.email)
+    access_token = create_access_token(subject=user.email, additional_claims={"uid": str(user.id)})
     return Token(access_token=access_token, token_type="bearer")

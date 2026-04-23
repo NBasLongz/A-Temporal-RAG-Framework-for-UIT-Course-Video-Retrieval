@@ -52,6 +52,7 @@ services:
       - "7861:7860"
     environment:
       API_BASE_URL: http://backend:8000
+      PUBLIC_API_BASE_URL: http://localhost:8000
       GRADIO_PORT: "7860"
     env_file:
       - .env

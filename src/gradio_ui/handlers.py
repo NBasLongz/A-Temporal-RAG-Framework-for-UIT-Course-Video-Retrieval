@@ -19,6 +19,25 @@ def build_query_status(llm_calls: int, guardrail_result: str | None) -> str:
     )
 
 
+def build_rate_limit_status(remaining: int | None, reset: str | None, retry_after: str | None) -> str:
+    if remaining is None and reset is None and retry_after is None:
+        return "<span style='font-size:0.75rem; color:#8b8faa; display:inline-block; margin-top:4px; padding-left:4px;'>Rate limit: unavailable</span>"
+
+    parts = []
+    if remaining is not None:
+        parts.append(f"Remaining: {remaining}")
+    if retry_after is not None:
+        parts.append(f"Retry-After: {retry_after}s")
+    # if reset is not None:
+    #     parts.append(f"Reset: {reset}")
+
+    joined = " | ".join(parts)
+    return (
+        "<span style='font-size:0.75rem; color:#8b8faa; display:inline-block; margin-top:4px; padding-left:4px;'>"
+        f"Rate limit: {joined}</span>"
+    )
+
+
 def show_login_form():
     return gr.update(visible=True)
 
@@ -52,7 +71,8 @@ async def handle_query(question: str, auth_state: dict | None):
         return result.message, empty_df, status_html, empty_df
 
     sources_df = format_sources_dataframe(result.sources)
-    status_html = build_query_status(result.n_llm_calls, result.guardrail_result)
+    rate_limit_html = build_rate_limit_status(result.rate_limit_remaining, result.rate_limit_reset, result.retry_after)
+    status_html = build_query_status(result.n_llm_calls, result.guardrail_result) + "<br>" + rate_limit_html
     return result.answer, sources_df, status_html, sources_df
 
 

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Response
 
 from src.schemas.agentic_ask import AgenticAskResponse
 from src.dependencies import AgenticRAGDep, get_current_user
@@ -9,7 +9,7 @@ router = APIRouter(prefix="/agentic_ask", tags=["ask"])
 
 @router.post("/")
 @limiter.limit("10/minute")
-async def ask_question(request: Request, question: str, rag_service: AgenticRAGDep, current_user: User = Depends(get_current_user)) -> AgenticAskResponse:
+async def ask_question(request: Request, response: Response, question: str, rag_service: AgenticRAGDep, current_user: User = Depends(get_current_user)) -> AgenticAskResponse:
     # Placeholder implementation
     # In a real implementation, you would process the question and return an answer
 
