@@ -33,10 +33,6 @@ services:
           path: ./main.py
           target: /app/main.py
 
-        - action: sync
-          path: ./public
-          target: /app/public
-
         # If you add new packages, tell Docker to rebuild the full image
         - action: rebuild
           path: ./pyproject.toml
@@ -45,34 +41,48 @@ services:
           path: ./uv.lock
 
   gradio:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.gradio
     restart: always
-    command: ["uv", "run", "python", "gradio_app.py"]
     ports:
-      - "7861:7860"
+      - "7860:7860"
     environment:
       API_BASE_URL: http://backend:8000
       PUBLIC_API_BASE_URL: http://localhost:8000
-      GRADIO_PORT: "7860"
+      GRADIO_SERVER_PORT: "7860"
+      GRADIO_SERVER_NAME: "0.0.0.0"
     env_file:
       - .env
     depends_on:
       - backend
     develop:
       watch:
+        # Sync Gradio UI components instantly without rebuilding
         - action: sync
-          path: ./src
-          target: /app/src
+          path: ./src/gradio_ui
+          target: /app/src/gradio_ui
 
         - action: sync
           path: ./gradio_app.py
           target: /app/gradio_app.py
 
+        # Rebuild only if dependencies change
         - action: rebuild
           path: ./pyproject.toml
 
         - action: rebuild
           path: ./uv.lock
+
+  frontend:
+    image: nginx:alpine
+    restart: always
+    ports:
+      - "3000:80"
+    volumes:
+      - ./public:/usr/share/nginx/html:ro
+    depends_on:
+      - backend
 
   db:
     image: postgres:16-alpine
@@ -87,7 +97,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      test: [ "CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}" ]
       interval: 5s
       timeout: 5s
       retries: 5

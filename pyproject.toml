@@ -1,28 +1,40 @@
 [project]
 name = "fastapi-database"
 version = "0.1.0"
-description = "Add your description here"
+description = "FastAPI + Gradio separated services"
 readme = "README.md"
 requires-python = ">=3.12"
+
+# Only packages truly shared by BOTH services
 dependencies = [
+    "pydantic[email]>=2.12.5",
+    "pydantic-settings>=2.13.1",
+    "python-dotenv>=1.2.2",
+]
+
+[dependency-groups]
+# Dependencies for the Backend service
+backend = [
     "asyncpg>=0.31.0",
     "fastapi>=0.135.2",
     "langchain>=1.2.13",
-    "pydantic[email]>=2.12.5",
-    "pydantic-settings>=2.13.1",
     "sqlalchemy>=2.0.48",
     "uvicorn>=0.42.0",
-    "ipykernel>=7.2.0",
     "langchain-google-genai>=4.2.1",
     "langchain-chroma>=1.1.0",
     "onnxruntime>=1.24.4",
     "langchain-community>=0.4.1",
     "rank-bm25>=0.2.2",
-    "gradio>=6.11.0",
     "langfuse>=4.2.0",
     "passlib>=1.7.4",
     "bcrypt<4.1",
     "pyjwt>=2.12.1",
     "python-multipart>=0.0.22",
     "slowapi>=0.1.9",
+]
+# Dependencies for the Gradio service
+gradio = [
+    "gradio>=6.11.0",
+    "httpx>=0.28.0",
+    "pandas>=2.0.0",
 ]

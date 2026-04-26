@@ -108,7 +108,6 @@ app.include_router(chunks_router)
 app.include_router(agentic_ask_router)
 
 app.mount("/media", StaticFiles(directory="/app/media"), name="media")
-app.mount("/", StaticFiles(directory="/app/public", html=True), name="public")
 
 app.add_middleware(
     CORSMiddleware,
