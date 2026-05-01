@@ -37,4 +37,5 @@ test/
 data/videos/
 videos/
 notebooks/
+# Local HuggingFace model cache — mounted as a volume at runtime
 models/

@@ -1,6 +1,6 @@
 import asyncio
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
@@ -100,6 +100,62 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+
+@app.get("/health", tags=["Health"])
+async def health(request: Request):
+    """
+    Liveness + readiness check.
+
+    Returns 200 when all critical components are up, 503 otherwise.
+    Each component reports its own status so ops can pinpoint failures quickly.
+    """
+    from fastapi import status
+    from fastapi.responses import JSONResponse
+    import httpx
+    from sqlalchemy import text
+
+    components: dict[str, str] = {}
+    all_healthy = True
+
+    # ── 1. PostgreSQL ────────────────────────────────────────────────────────
+    try:
+        async with engine.connect() as conn:
+            await conn.execute(text("SELECT 1"))
+        components["postgres"] = "ok"
+    except Exception as exc:
+        components["postgres"] = f"error: {exc}"
+        all_healthy = False
+
+    # ── 2. RAG components (BM25 + Chroma + RAG service) ─────────────────────
+    components["bm25_retriever"]  = "ok" if getattr(request.app.state, "bm25_retriever",  None) else "not initialised"
+    components["chroma_retriever"] = "ok" if getattr(request.app.state, "chroma_retriever", None) else "not initialised"
+    components["rag_service"]     = "ok" if getattr(request.app.state, "rag_service",      None) else "not initialised"
+
+    if any(v != "ok" for k, v in components.items() if k in ("bm25_retriever", "chroma_retriever", "rag_service")):
+        all_healthy = False
+
+    # ── 3. Reranker inference service ────────────────────────────────────────
+    reranker_url = getattr(request.app.state, "settings", None)
+    reranker_url = reranker_url.RERANKER_URL if reranker_url else "http://localhost:8001"
+    try:
+        async with httpx.AsyncClient(timeout=3.0) as client:
+            resp = await client.get(f"{reranker_url}/health")
+            resp.raise_for_status()
+        components["reranker"] = "ok"
+    except Exception as exc:
+        components["reranker"] = f"error: {exc}"
+        all_healthy = False
+
+    # ── Response ─────────────────────────────────────────────────────────────
+    payload = {
+        "status": "ok" if all_healthy else "degraded",
+        "components": components,
+    }
+    return JSONResponse(
+        content=payload,
+        status_code=status.HTTP_200_OK if all_healthy else status.HTTP_503_SERVICE_UNAVAILABLE,
+    )
 
 app.include_router(auth_router)
 app.include_router(users_router)

@@ -141,6 +141,7 @@ class AgenticRagService:
           temperature = self.graph_config.temperature,
           retriever_top_k = self.graph_config.retriever_top_k,
           reranker_top_k = self.graph_config.reranker_top_k,
+          reranker_url = self.graph_config.reranker_url,
           n_iterations = self.graph_config.n_iterations
         )
         

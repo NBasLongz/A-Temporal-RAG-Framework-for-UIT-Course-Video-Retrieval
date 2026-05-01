@@ -17,6 +17,7 @@ dependencies = [
 backend = [
     "asyncpg>=0.31.0",
     "fastapi>=0.135.2",
+    "httpx>=0.28.0",
     "langchain>=1.2.13",
     "sqlalchemy>=2.0.48",
     "uvicorn>=0.42.0",
