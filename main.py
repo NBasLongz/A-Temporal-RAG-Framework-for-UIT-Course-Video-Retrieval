@@ -82,7 +82,7 @@ async def lifespan(app: FastAPI):
     logging.info("Initialized Chroma retriever and stored in app state.")
 
     #Create and store Agentic Rag Service in the app state for later use
-    logging.info("Initializing Agentic RƯAG service...")
+    logging.info("Initializing Agentic RAG service...")
     rag_service = make_agentic_rag_service(
             bm25_retriever,
             chroma_retriever,
