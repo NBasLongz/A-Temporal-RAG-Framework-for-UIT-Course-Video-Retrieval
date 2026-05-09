@@ -14,8 +14,18 @@ from langchain_core.vectorstores import VectorStoreRetriever
 from fastapi import Depends, HTTPException, Request
 
 import logging
+import jwt
+from fastapi import Depends, HTTPException, Request, status
+from fastapi.security import OAuth2PasswordBearer
+from pydantic import ValidationError
+
+from src.core.security import ALGORITHM, SECRET_KEY
+from src.schemas.user import TokenData
+from src.models.user import User
 
 logger = logging.getLogger(__name__)
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login/token")
 
 async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
     async with async_session_maker() as session:
@@ -28,6 +38,29 @@ async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
             await session.close()
 
 def get_user_service(dependency_session: AsyncSession = Depends(get_db_session)):
+    return UserService(dependency_session)
+
+async def get_current_user(
+    token: Annotated[str, Depends(oauth2_scheme)],
+    user_service: Annotated[UserService, Depends(get_user_service)]
+) -> User:
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        email: str = payload.get("sub")
+        if email is None:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate credentials")
+        token_data = TokenData(email=email)
+    except (jwt.InvalidTokenError, ValidationError):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    user = await user_service.get_user_by_email(email=token_data.email)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
+
     logger.info("Creating UserService with provided database session.")
     return UserService(dependency_session)
 

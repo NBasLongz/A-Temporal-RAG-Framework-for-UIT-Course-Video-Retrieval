@@ -42,8 +42,9 @@ class Settings(BaseConfigSettings):
     EMBEDDING_MODEL:str = "gemini-embedding-2-preview"
 
     # Retriever and Reranker settings
-    retriever_top_k: int = 10
+    retriever_top_k: int = 20
     reranker_top_k: int = 10
+    RERANKER_URL: str = "http://localhost:8001"
 
     # Langfuse
     

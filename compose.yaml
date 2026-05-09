@@ -14,6 +14,7 @@ services:
       POSTGRES_PORT: "5432"
       CHROMA_HOST: chromadb
       CHROMA_PORT: "8000"
+      RERANKER_URL: http://reranker:8001
 
     env_file:
       - .env
@@ -21,6 +22,10 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      reranker:
+        condition: service_healthy
+      chromadb:
+        condition: service_started
 
     develop:
       watch:
@@ -33,16 +38,100 @@ services:
           path: ./main.py
           target: /app/main.py
 
-        - action: sync
-          path: ./public
-          target: /app/public
-
         # If you add new packages, tell Docker to rebuild the full image
         - action: rebuild
           path: ./pyproject.toml
 
         - action: rebuild
           path: ./uv.lock
+
+    healthcheck:
+      # python:3.12-slim has no curl — use python's built-in urllib instead
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\""]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+
+  gradio:
+    build:
+      context: .
+      dockerfile: Dockerfile.gradio
+    restart: always
+    ports:
+      - "7860:7860"
+    environment:
+      API_BASE_URL: http://backend:8000
+      PUBLIC_API_BASE_URL: http://localhost:8000
+      GRADIO_SERVER_PORT: "7860"
+      GRADIO_SERVER_NAME: "0.0.0.0"
+    env_file:
+      - .env
+    depends_on:
+      - backend
+    develop:
+      watch:
+        # Sync Gradio UI components instantly without rebuilding
+        - action: sync
+          path: ./src/gradio_ui
+          target: /app/src/gradio_ui
+
+        - action: sync
+          path: ./gradio_app.py
+          target: /app/gradio_app.py
+
+        # Rebuild only if dependencies change
+        - action: rebuild
+          path: ./pyproject.toml
+
+        - action: rebuild
+          path: ./uv.lock
+
+  frontend:
+    image: nginx:alpine
+    restart: always
+    ports:
+      - "3000:80"
+    volumes:
+      - ./public:/usr/share/nginx/html:ro
+    depends_on:
+      - backend
+
+  reranker:
+    build:
+      context: .
+      dockerfile: inference/Dockerfile
+    restart: always
+    ports:
+      - "8001:8001"
+    environment:
+      # HuggingFace will read cached weights from this path (mounted below)
+      HF_HOME: /models
+      MODEL_NAME: BAAI/bge-reranker-v2-m3
+    volumes:
+      # Mount the local ./models folder so weights are shared with the host.
+      # Download once with: python inference/download_model.py
+      - ./models:/models
+    # Grant the container access to all available NVIDIA GPUs
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [ gpu ]
+    develop:
+      watch:
+        - action: sync+restart
+          path: ./inference/main.py
+          target: /app/main.py
+    healthcheck:
+      # pytorch image has no curl — use python instead
+      test: [ "CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8001/health')\"" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   db:
     image: postgres:16-alpine
     restart: always
@@ -56,7 +145,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      test: [ "CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}" ]
       interval: 5s
       timeout: 5s
       retries: 5

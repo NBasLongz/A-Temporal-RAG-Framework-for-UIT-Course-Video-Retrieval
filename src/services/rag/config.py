@@ -16,3 +16,7 @@ class GraphConfig(BaseModel):
     bm25_weight: float = 0.3
 
     settings: Settings = Field(default_factory=get_settings)
+
+    @property
+    def reranker_url(self) -> str:
+        return self.settings.RERANKER_URL

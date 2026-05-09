@@ -37,6 +37,5 @@ test/
 data/videos/
 videos/
 notebooks/
-
-**/gradio_app.py
-
+# Local HuggingFace model cache — mounted as a volume at runtime
+models/

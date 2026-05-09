@@ -108,11 +108,12 @@ class AgenticRagService:
         self,
         query: str,
         model: Optional[str] = None,
+        trace_user_id: Optional[str] = None,
     ) -> dict:
         # Main method to handle user query and return answer
-        return await self._execute_graph(query, model)
+        return await self._execute_graph(query, model, trace_user_id)
 
-    async def _execute_graph(self, query: str, model: Optional[str]) -> dict:
+    async def _execute_graph(self, query: str, model: Optional[str], trace_user_id: Optional[str] = None) -> dict:
         start_time = time.time()
 
         logger.info("Invoking LangGraph workflow")
@@ -140,15 +141,17 @@ class AgenticRagService:
           temperature = self.graph_config.temperature,
           retriever_top_k = self.graph_config.retriever_top_k,
           reranker_top_k = self.graph_config.reranker_top_k,
+          reranker_url = self.graph_config.reranker_url,
           n_iterations = self.graph_config.n_iterations
         )
         
         handler = CallbackHandler()
         langfuse = get_client()
+        user_id_for_trace = trace_user_id or "anonymous"
 
         with langfuse.start_as_current_observation(as_type="span", name="langchain-call"):
             # Propagate session_id to all observations
-            with propagate_attributes(session_id=str(uuid.uuid4())):
+            with propagate_attributes(session_id=str(uuid.uuid4()), user_id=user_id_for_trace, trace_name="rag-trace"):
 
                 result = await self.graph.ainvoke(
                                     inital_state,

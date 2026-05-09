@@ -5,7 +5,7 @@ class UserBase(BaseModel):
     name: str
 
 class UserCreate(UserBase):
-    pass
+    password: str
 
 class UserResponse(UserBase):
     id: int
@@ -13,3 +13,10 @@ class UserResponse(UserBase):
 
     # Allows Pydantic to read data even if it is not a dict (like a SQLAlchemy model)
     model_config = {"from_attributes": True}
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+class TokenData(BaseModel):
+    email: str | None = None

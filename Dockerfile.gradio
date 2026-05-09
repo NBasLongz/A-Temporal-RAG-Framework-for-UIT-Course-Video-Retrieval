@@ -1,0 +1,16 @@
+FROM python:3.12-slim
+
+# Install UV
+COPY --from=ghcr.io/astral-sh/uv:0.9.9 /uv /uvx /bin/
+
+WORKDIR /app
+
+COPY pyproject.toml uv.lock ./
+
+RUN uv sync --only-group gradio --locked
+
+# Only copy files needed by the Gradio service
+COPY gradio_app.py .
+COPY src/gradio_ui ./src/gradio_ui
+
+CMD ["uv", "run", "python", "gradio_app.py"]

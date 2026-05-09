@@ -13,4 +13,5 @@ class Context:
     temperature: float = 0.0
     retriever_top_k: int = 20
     reranker_top_k: int = 10
+    reranker_url: str = "http://localhost:8001"
     n_iterations: int = 3

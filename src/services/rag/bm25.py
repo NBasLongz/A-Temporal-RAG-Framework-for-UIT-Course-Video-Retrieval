@@ -1,9 +1,13 @@
+import re
 from langchain_community.retrievers import BM25Retriever
 from langchain_core.documents import Document
 import pickle
 import os
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "..", "data")
+
+def custom_preprocess(text: str) -> list[str]:
+    return re.sub(r'[^\w\s]', '', text).lower().split()
 
 def make_bm25_retriever() -> BM25Retriever:
     """Factory function to create a BM25Service instance."""
@@ -19,7 +23,8 @@ def make_bm25_retriever() -> BM25Retriever:
                     metadata=loaded_data['metadatas'][i]
                 )
                 for i in range(len(loaded_data['ids']))
-            ]
+            ],
+            preprocess=custom_preprocess
         )
 
         return bm25_retriever

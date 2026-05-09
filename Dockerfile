@@ -8,7 +8,7 @@ WORKDIR /app
 
 COPY pyproject.toml uv.lock ./
 
-RUN uv sync --locked
+RUN uv sync --only-group backend --locked
 
 COPY . .
 
