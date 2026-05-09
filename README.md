@@ -37,19 +37,8 @@ docker compose watch  # Hỗ trợ Hot-reload
 ```
 - **Dashboard cho dữ liệu** sẽ hoạt động tại: `http://localhost:8000`
 
-Sau khi các container Docker đã khởi chạy thành công, hãy bật giao diện người dùng (User Interface) bằng lệnh sau:
-```sh
-uv run gradio gradio_app.py
-```
-
-- Kết nối đến giao diện tại `http://localhost:7861`
-
-**Khởi chạy tự thủ công (dev mode)**:
-Yêu cầu Python >= 3.12 và công cụ quản lý thư viện `uv`:
-```sh
-# Chạy server FastAPI
-fastapi run main.py # Hoặc uvicorn
-```
+- **Gradio UI** sẽ hoạt động tại `http://localhost:7860`
 
 ## Lưu ý
-Các thiết lập biến môi trường như API Keys của LLM/VectorDB, thông tin DataBase cần được cấu hình theo template tại thư mục gốc.
+- Các thiết lập biến môi trường như API Keys của LLM/VectorDB, thông tin DataBase cần được cấu hình theo template tại thư mục gốc.
+- Reranker Service chạy container sử dụng GPU (yêu cầu CUDA).

@@ -3,7 +3,7 @@
 ## Code Style
 - **Language**: Python 3.12+
 - **Frameworks**: FastAPI, SQLAlchemy 2.0+ (async via `asyncpg`), Pydantic V2 for data validation, LangGraph & LangChain for Agentic RAG, Gradio for the secondary UI.
-- **RAG Stack**: LangChain Core, LangGraph for stateful agent orchestration, ChromaDB (Vector) matched with BM25 (Keyword) for Hybrid Retrieval, and Langfuse for telemetry. Google GenAI (Gemini) is used as the LLM provider.
+- **RAG Stack**: LangChain Core, LangGraph for stateful agent orchestration, ChromaDB (Vector) matched with BM25 (Keyword) for Hybrid Retrieval, Local Embedding models (BGE-M3) and Reranker (BGE-reranker), and Langfuse for telemetry. Google GenAI (Gemini) is used as the LLM provider.
 - **Auth & Rate Limit**: JWT bearer auth is used for API protection. SlowAPI provides shared request rate limiting for protected endpoints.
 - **Async**: Use asynchronous operations exclusively (FastAPI and SQLAlchemy). Any synchronous I/O operations must be deferred to `asyncio.to_thread`.
 - **Primary Keys**: Use `uuid.UUID` for Primary Keys across all database models by default.
@@ -24,6 +24,7 @@ Clean layered architecture following the repository pattern:
 - **`src/core/rate_limit.py`**: Shared SlowAPI limiter instance used by protected API routes.
 - **`src/gradio_ui/`**: Modular Gradio UI package. Keep client calls, handlers, styles, and component layout separated.
 - **`gradio_app.py`**: Thin launcher for the Gradio frontend application.
+- **`public/`**: Static HTML/frontend application using raw HTML/Nginx.
 
 ## Conventions
 - **Routing Modules**: Delegate business logic strictly to `services/` and database access to `repositories/`. Avoid processing states manually in routers.
@@ -36,7 +37,7 @@ Clean layered architecture following the repository pattern:
 - **Networking**: Default database connections refer to internal Docker networking (`db:5432`), not `localhost:5432`.
 
 ## Build and Developer Environment
-- **Package Manager**: `uv` (as defined in `pyproject.toml`)
-- **Docker Compose**: The application runs entirely via Docker Compose (`backend`, `db` as Postgres 16, and `adminer`). Hot-reload mapping via `docker compose watch` runs sync without container rebuilding.
+- **Package Manager**: `uv` (as defined in `pyproject.toml` with separate dependency groups)
+- **Docker Compose**: The application runs entirely via Docker Compose (`backend`, `gradio`, `frontend` as static nginx, `db` as Postgres 16, `reranker` for sentence transformers, and `chromadb`). Hot-reload mapping via `docker compose watch` runs sync without container rebuilding (for backend and gradio).
 - **Database Initialization**: `Base.metadata.create_all`, schema backfill for `users.hashed_password`, CSV seeding (using `data/*.csv`), and VectorDB seeding are automatically handled during the FastAPI lifespan.
-- **Gradio Run Command**: Start the UI with `uv run python gradio_app.py`. The launcher picks the first free port in the `7860-7869` range and expects the FastAPI backend at `http://localhost:8000` by default.
+- **Gradio Run Command**: Start the UI with `uv run python gradio_app.py`. The launcher picks the first free port in the `7860-7869` range and expects the FastAPI backend at `http://localhost:8000` by default. Or use `docker compose up gradio`.
