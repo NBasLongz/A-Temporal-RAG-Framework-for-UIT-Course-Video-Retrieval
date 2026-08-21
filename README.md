@@ -1,11 +1,11 @@
 <div align="center">
 <p align="center">
   <a href="https://www.uit.edu.vn/" title="University of Information Technology">
-    <img src="https://i.imgur.com/WmMnSRt.png" alt="University of Information Technology (UIT)" width="700">
+    <img src="https://i.imgur.com/WmMnSRt.png" alt="University of Information Technology (UIT)" width="600">
   </a>
 </p>
 
-# A Temporal RAG Framework for UIT Course Video Retrieval & Q&A
+# RAG-BASED LECTURE VIDEO Q&A SYSTEM
 
 ### Đồ án môn học CS431 - Các Kỹ thuật Học sâu và Ứng dụng
 
