@@ -35,6 +35,7 @@
 
 ## Mục lục
 - [Giới thiệu tổng quan](#giới-thiệu-tổng-quan)
+- [Quy trình xử lý toàn diện (End-to-End Pipeline)](#quy-trình-xử-lý-toàn-diện-end-to-end-pipeline)
 - [Kiến trúc hệ thống](#kiến-trúc-hệ-thống-system-architecture)
 - [Luồng xử lý Agentic RAG (LangGraph Workflow)](#luồng-xử-lý-agentic-rag-langgraph-workflow)
 - [Các tính năng chính](#các-tính-năng-chính)
@@ -61,6 +62,37 @@ Hệ thống cung cấp các khả năng:
 3. Thực hiện truy xuất kết hợp **Hybrid Search (BM25 + ChromaDB Dense Embedding)**.
 4. Tái xếp hạng ngữ nghĩa chuyên sâu bằng Microservice Cross-Encoder **BAAI/bge-reranker-v2-m3** (tăng tốc GPU).
 5. Sinh câu trả lời sư phạm chi tiết kèm công thức toán $\LaTeX$ và liên kết mốc thời gian (**Timestamp**), hỗ trợ **chuyển thẳng tới phân đoạn video bài giảng tương ứng**.
+
+---
+
+## Quy trình xử lý toàn diện (End-to-End Pipeline)
+
+Dưới đây là sơ đồ kiến trúc quy trình tổng thể từ khâu nạp và tiền xử lý video bài giảng (Offline Ingestion) đến khâu tiếp nhận câu hỏi và sinh phản hồi thông minh (Online Inference):
+
+<div align="center">
+  <img src="assets/pipeline.png" alt="Framework Pipeline Overview" width="100%" />
+</div>
+
+Quy trình được chia thành 2 giai đoạn độc lập nhưng liên kết chặt chẽ:
+
+### 1. Giai đoạn Tiền xử lý & Nạp dữ liệu (Offline Ingestion)
+- **Xử lý hình ảnh (Visual Stream)**:
+  - Phân tách video gốc (`RAW VIDEO`) thành chuỗi khung hình (`FRAMES`).
+  - Lọc bỏ khung hình trùng lặp để trích xuất các khung hình chính mang thông tin (`DEDUP / GET THE KEY FRAMES`).
+  - Sử dụng mô hình `OCR` để nhận diện toàn bộ văn bản và công thức xuất hiện trên slide bài giảng.
+- **Xử lý âm thanh (Audio Stream)**:
+  - Tách luồng âm thanh từ video (`AUDIO EXTRACTION`).
+  - Sử dụng mô hình nhận dạng tiếng nói tự động (`ASR TRANSCRIPTION`) để chuyển đổi lời giảng thành văn bản đồng bộ theo mốc thời gian.
+- **Hợp nhất và lưu trữ (Merge & Refine)**:
+  - Ghép nối thông tin hình ảnh (slide) và âm thanh (lời giảng), phân đoạn thành các chunks văn bản logic.
+  - Lưu trữ metadata và quan hệ thời gian vào cơ sở dữ liệu quan hệ (`Relational DB - PostgreSQL`), đồng thời tính toán vector đại diện để lập chỉ mục trong cơ sở dữ liệu vector (`VECTOR DB - ChromaDB`).
+
+### 2. Giai đoạn Truy xuất & Sinh câu trả lời (Online Inference)
+- **Kiểm duyệt an toàn (`GUARDRAIL`)**: Tiếp nhận câu hỏi của sinh viên (`USER QUERY`), phát hiện các truy vấn độc hại hoặc ngoài phạm vi khóa học. Nếu không hợp lệ, hệ thống phản hồi từ chối ngay (`RESPONSE`).
+- **Biến đổi truy vấn (`QUERY TRANSFORMATION`)**: Sử dụng phương pháp HyDE mở rộng ngữ cảnh câu hỏi sang tiếng Việt học thuật kèm thuật ngữ tiếng Anh.
+- **Truy xuất kết hợp (`RETRIEVE & FUSION`)**: Thực hiện đồng thời tìm kiếm ngữ nghĩa sâu (`SEMANTIC SEARCH`) trên Vector DB và tìm kiếm từ khóa chính xác (`LEXICAL SEARCH` qua BM25), sau đó kết hợp điểm số qua cơ chế `FUSION`.
+- **Tái xếp hạng (`RERANK`)**: Đưa danh sách tài liệu ứng viên qua mô hình Cross-Encoder chuyên biệt để chấm điểm tương đồng ngữ nghĩa chính xác nhất.
+- **Sinh câu trả lời (`GENERATE ANSWER`)**: Mô hình LLM tổng hợp ngữ cảnh đã qua lọc và sinh câu trả lời chi tiết kèm danh sách mốc thời gian video để trả về cho người dùng (`RESPONSE`).
 
 ---
 
