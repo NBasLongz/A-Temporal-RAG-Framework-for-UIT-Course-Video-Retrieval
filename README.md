@@ -1,9 +1,13 @@
 <div align="center">
+<p align="center">
+  <a href="https://www.uit.edu.vn/" title="University of Information Technology">
+    <img src="https://i.imgur.com/WmMnSRt.png" alt="University of Information Technology (UIT)" width="700">
+  </a>
+</p>
 
 # A Temporal RAG Framework for UIT Course Video Retrieval & Q&A
 
 ### Đồ án môn học CS431 - Các Kỹ thuật Học sâu và Ứng dụng
-**Trường Đại học Công nghệ Thông tin – Đại học Quốc gia TP.HCM (UIT)**
 
 ---
 
@@ -27,9 +31,9 @@
 
 | STT | Họ và Tên | MSSV | GitHub | Vai trò / Trách nhiệm chính |
 | :---: | :--- | :---: | :--- | :--- |
-| **1** | **Lương Quang Duy** | `23520368` | [duylw](https://github.com/duylw) | Xây dựng Agentic Graph (LangGraph), Thiết kế Reranking & Evaluation |
-| **2** | **Nguyễn Bá Long** | `23520880` | [NBasLongz](https://github.com/NBasLongz) | Backend Architecture (FastAPI), Hybrid Search (BM25 + VectorDB), Docker Orchestration |
-| **3** | **Dương Thái Ý Nhi** | `23521106` | [dtynhi](https://github.com/dtynhi) | Phát triển Gradio UI tương tác Video/Timestamp, Tiền xử lý dữ liệu Video Chunks |
+| **1** | **Lương Quang Duy** | `23520368` | [duylw](https://github.com/duylw) |
+| **2** | **Nguyễn Bá Long** | `23520880` | [NBasLongz](https://github.com/NBasLongz) |
+| **3** | **Dương Thái Ý Nhi** | `23521106` | [dtynhi](https://github.com/dtynhi) |
 
 ---
 
