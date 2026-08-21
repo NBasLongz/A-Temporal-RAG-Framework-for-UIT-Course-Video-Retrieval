@@ -29,8 +29,8 @@
 
 ## Danh sách thành viên nhóm
 
-| STT | Họ và Tên | MSSV | GitHub | Vai trò / Trách nhiệm chính |
-| :---: | :--- | :---: | :--- | :--- |
+| STT | Họ và Tên | MSSV | GitHub |
+| :---: | :--- | :---: | :--- |
 | **1** | **Lương Quang Duy** | `23520368` | [duylw](https://github.com/duylw) |
 | **2** | **Nguyễn Bá Long** | `23520880` | [NBasLongz](https://github.com/NBasLongz) |
 | **3** | **Dương Thái Ý Nhi** | `23521106` | [dtynhi](https://github.com/dtynhi) |
