@@ -1,44 +1,391 @@
-# Đồ án CS431 - Các kỹ thuật học sâu và ứng dụng
+<div align="center">
 
-Dự án này là hệ thống Hỏi/Đáp (Q&A) nâng cao dựa trên kiến trúc RAG (Retrieval-Augmented Generation) và LangGraph, được xây dựng trên nền tảng FastAPI.
+# A Temporal RAG Framework for UIT Course Video Retrieval & Q&A
 
-## Thành viên nhóm
+### Đồ án môn học CS431 - Các Kỹ thuật Học sâu và Ứng dụng
+**Trường Đại học Công nghệ Thông tin – Đại học Quốc gia TP.HCM (UIT)**
 
-| STT | Họ và Tên | MSSV | GitHub |
-| :---: | :--- | :---: | :--- |
-| 1 | Lương Quang Duy | 23520368 | [duylw](https://github.com/duylw) |
-| 2 | Nguyễn Bá Long | 23520880 | [NBasLongz](https://github.com/NBasLongz) |
-| 3 | Dương Thái Ý Nhi | 23521106 | [dtynhi](https://github.com/dtynhi) |
+---
 
-## Giới thiệu dự án
+[![GitHub Repository](https://img.shields.io/badge/GitHub-Repository-181717?style=for-the-badge&logo=github)](https://github.com/NBasLongz/A-Temporal-RAG-Framework-for-UIT-Course-Video-Retrieval.git)
+[![Python Version](https://img.shields.io/badge/Python-3.12%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.135%2B-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![LangGraph](https://img.shields.io/badge/LangGraph-Agentic%20Workflow-FF6F00?style=for-the-badge&logo=langchain&logoColor=white)](https://langchain-ai.github.io/langgraph/)
+[![ChromaDB](https://img.shields.io/badge/ChromaDB-Vector%20Store-FC4C02?style=for-the-badge)](https://www.trychroma.com/)
+[![PyTorch CUDA](https://img.shields.io/badge/PyTorch-CUDA%20Accelerated-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white)](https://pytorch.org/)
+[![Gradio](https://img.shields.io/badge/Gradio-6.11%2B%20UI-FF7C00?style=for-the-badge&logo=gradio&logoColor=white)](https://gradio.app/)
+[![Docker](https://img.shields.io/badge/Docker-Compose%20Ready-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
+[![Langfuse](https://img.shields.io/badge/Langfuse-Observability-000000?style=for-the-badge&logo=langfuse&logoColor=white)](https://langfuse.com/)
 
-Hệ thống được thiết kế để tìm kiếm, trích xuất thông tin tư liệu (text, video) thông qua AI tự động định tuyến. Hệ thống kết hợp các công nghệ:
-- **Service/API**: FastAPI, Uvicorn, Pydantic, SQLAlchemy, PostgreSQL (asyncpg).
-- **Deep Learning / AI**: LangChain, LangGraph.
-- **Lưu trữ & RAG**: VectorDB (Chroma/Elasticsearch), thuật toán tính toán từ khóa BM25.
-- **Giao diện & Đánh giá**: Gradio UI, Langfuse, RAGAS.
+**GitHub Repository:** [https://github.com/NBasLongz/A-Temporal-RAG-Framework-for-UIT-Course-Video-Retrieval.git](https://github.com/NBasLongz/A-Temporal-RAG-Framework-for-UIT-Course-Video-Retrieval.git)
 
-## Cấu trúc thư mục thuật
+</div>
 
-- `src/api/`: Các router xử lý API endpoints.
-- `src/services/rag/`: Chứa các đồ thị tác vụ LangGraph, Agent xử lý truy vấn, xếp hạng, kiểm duyệt thông tin.
-- `src/models/`, `src/schemas/`: Cấu trúc dữ liệu Database và API theo kiến trúc phân tầng.
-- `scripts/`: Chứa mã chuẩn bị dữ liệu và kiểm định (Evaluating RAG).
-- `data/`: Dữ liệu đầu vào, kết hợp lưu trữ file text và thông tin mapping cho nội dung đa phương tiện.
+---
+
+## Danh sách thành viên nhóm
+
+| STT | Họ và Tên | MSSV | GitHub | Vai trò / Trách nhiệm chính |
+| :---: | :--- | :---: | :--- | :--- |
+| **1** | **Lương Quang Duy** | `23520368` | [duylw](https://github.com/duylw) | Xây dựng Agentic Graph (LangGraph), Thiết kế Reranking & Evaluation |
+| **2** | **Nguyễn Bá Long** | `23520880` | [NBasLongz](https://github.com/NBasLongz) | Backend Architecture (FastAPI), Hybrid Search (BM25 + VectorDB), Docker Orchestration |
+| **3** | **Dương Thái Ý Nhi** | `23521106` | [dtynhi](https://github.com/dtynhi) | Phát triển Gradio UI tương tác Video/Timestamp, Tiền xử lý dữ liệu Video Chunks |
+
+---
+
+## Mục lục
+- [Giới thiệu tổng quan](#giới-thiệu-tổng-quan)
+- [Kiến trúc hệ thống](#kiến-trúc-hệ-thống-system-architecture)
+- [Luồng xử lý Agentic RAG (LangGraph Workflow)](#luồng-xử-lý-agentic-rag-langgraph-workflow)
+- [Các tính năng chính](#các-tính-năng-chính)
+- [Cấu trúc mã nguồn](#cấu-trúc-mã-nguồn)
+- [Yêu cầu hệ thống](#yêu-cầu-hệ-thống)
+- [Cài đặt và Khởi chạy](#cài-đặt-và-khởi-chạy)
+- [Cấu hình biến môi trường (.env)](#cấu-hình-biến-môi-trường-env)
+- [Tài liệu API Endpoints](#tài-liệu-api-endpoints)
+- [Giao diện người dùng (Gradio UI)](#giao-diện-người-dùng-gradio-ui)
+- [Giám sát và Đánh giá (Observability)](#giám-sát-và-đánh-giá-observability)
+- [Thông tin môn học](#thông-tin-môn-học)
+
+---
+
+## Giới thiệu tổng quan
+
+Trong các khóa học trực tuyến và đại học hiện đại, bài giảng video là nguồn tri thức phong phú nhưng đòi hỏi nhiều thời gian để tra cứu chính xác phân đoạn cần xem lại. Việc tua thủ công các video dài để tìm kiếm một định nghĩa, công thức toán hay giải thích thuật toán làm giảm hiệu suất tự học của sinh viên.
+
+**A Temporal RAG Framework for UIT Course Video Retrieval** là hệ thống Hỏi - Đáp (Q&A) dựa trên kiến trúc RAG (Retrieval-Augmented Generation) kết hợp điều phối đồ thị tác vụ tự động (**LangGraph**) và cơ chế định vị mốc thời gian (**Temporal Video Retrieval**).
+
+Hệ thống cung cấp các khả năng:
+1. Tiếp nhận câu hỏi học thuật tự nhiên bằng tiếng Việt từ người học.
+2. Kiểm duyệt an toàn câu hỏi và áp dụng kỹ thuật **HyDE** (Hypothetical Document Embeddings) để mở rộng ngữ nghĩa truy vấn bài giảng.
+3. Thực hiện truy xuất kết hợp **Hybrid Search (BM25 + ChromaDB Dense Embedding)**.
+4. Tái xếp hạng ngữ nghĩa chuyên sâu bằng Microservice Cross-Encoder **BAAI/bge-reranker-v2-m3** (tăng tốc GPU).
+5. Sinh câu trả lời sư phạm chi tiết kèm công thức toán $\LaTeX$ và liên kết mốc thời gian (**Timestamp**), hỗ trợ **chuyển thẳng tới phân đoạn video bài giảng tương ứng**.
+
+---
+
+## Kiến trúc hệ thống (System Architecture)
+
+Hệ thống được phân chia theo kiến trúc Microservices và đóng gói hoàn chỉnh bằng **Docker Compose**:
+
+```mermaid
+flowchart TD
+    subgraph ClientLayer ["Client & Presentation Layer"]
+        UI["Gradio UI (Port 7860)\n- Interactive Chat\n- Auto Video Seeking\n- Source Explorer"]
+        WEB["Nginx Frontend (Port 3000)\n- Static Web Delivery"]
+    end
+
+    subgraph APILayer ["API Gateway & Core Application Layer"]
+        API["FastAPI Application (Port 8000)\n- JWT Auth & Role Access\n- SlowAPI Rate Limiting\n- Lifespan Auto-Seeding"]
+        STATIC["Media Static Server (/media/videos)"]
+    end
+
+    subgraph AgenticCore ["Agentic LangGraph Workflow Engine"]
+        G_GUARD["Query Guardrail Node"]
+        G_HYDE["HyDE Query Rewriter Node"]
+        G_TOOL["Hybrid Retrieval Tool (BM25 + Chroma)"]
+        G_RERANK["Rerank Invocation Node"]
+        G_GEN["Context Answer Generator Node"]
+    end
+
+    subgraph InferenceLayer ["GPU-Accelerated Microservices"]
+        RERANK_SRV["Reranker Service (Port 8001)\nBAAI/bge-reranker-v2-m3\n(PyTorch / CUDA Acceleration)"]
+    end
+
+    subgraph StorageLayer ["Storage & Knowledge Base"]
+        PG["PostgreSQL 16 (Port 5433)\n- Users, Videos, Chunks Metadata"]
+        CHROMA["ChromaDB (Port 8008)\n- Vector Embeddings (Gemini)"]
+        BM25_STORE["In-Memory / Cached BM25 Corpus"]
+        ADM["Adminer DB Manager (Port 8081)"]
+    end
+
+    subgraph ObservabilityLayer ["Tracing & Observability"]
+        LANGFUSE["Langfuse Cloud / Local\n- Latency, Spans, Tokens, Traces"]
+    end
+
+    UI -->|HTTP / Async API Calls| API
+    API --> AgenticCore
+    AgenticCore -->|Cross-Encoder API| RERANK_SRV
+    AgenticCore -->|Dense Search| CHROMA
+    AgenticCore -->|Sparse Search| BM25_STORE
+    API -->|AsyncPG ORM| PG
+    AgenticCore -.->|Tracing & Evaluation| LANGFUSE
+    UI -->|Direct Video Stream| STATIC
+```
+
+---
+
+## Luồng xử lý Agentic RAG (LangGraph Workflow)
+
+```mermaid
+graph LR
+    Start([User Query]) --> Guardrail{Query Guardrail}
+    
+    Guardrail -- Off-topic / Malicious --> OutOfScope[Out of Scope Response] --> EndNode([Return Message])
+    
+    Guardrail -- Academic Relevant --> Rewrite[HyDE Query Rewrite\nSinh tài liệu giả định song ngữ]
+    
+    Rewrite --> Retrieve[Get Relevant Documents]
+    
+    Retrieve --> SearchTool[Hybrid Search Tool\nBM25 + Chroma Vector DB]
+    
+    SearchTool --> Rerank[GPU Cross-Encoder Rerank\nbge-reranker-v2-m3]
+    
+    Rerank --> GenAnswer[Context-Grounded Answer Generation\nGemini 2.5 Flash + LaTeX]
+    
+    GenAnswer --> FinalResponse[Pack Answer + Video Timestamps] --> EndNode
+```
+
+### Chi tiết các Node trong Đồ thị LangGraph:
+1. **`query_guardrail`**: Kiểm tra an toàn truy vấn, phát hiện tấn công prompt injection/jailbreak và phân loại tính liên quan học thuật của câu hỏi.
+2. **`out_of_scope_response`**: Phản hồi từ chối lịch sự khi câu hỏi không thuộc phạm vi bài giảng hoặc vi phạm chính sách an toàn.
+3. **`query_rewrite` (HyDE)**: Sinh một đoạn văn bản giả định (Hypothetical Document) bằng tiếng Việt kèm thuật ngữ tiếng Anh mở rộng nhằm tối ưu khoảng cách biểu diễn vector.
+4. **`search_tool` (Hybrid Search)**:
+   - *Dense Retrieval*: ChromaDB sử dụng vector từ Google Gemini Embedding API.
+   - *Sparse Retrieval*: Thuật toán BM25 trích xuất chính xác theo từ khóa/công thức.
+   - *Fusion*: Kết hợp điểm số theo trọng số cấu hình (`semantic_weight` và `bm25_weight`).
+5. **`rerank`**: Gửi danh sách ứng viên Top-K sang Microservice GPU chạy mô hình **BAAI/bge-reranker-v2-m3** để tái chấm điểm tương đồng ngữ nghĩa.
+6. **`generate_answer`**: Tổng hợp ngữ cảnh từ slide và transcript bài giảng để sinh câu trả lời sư phạm chi tiết, hỗ trợ định dạng công thức toán $\LaTeX$ và trích dẫn minh bạch.
+
+---
+
+## Các tính năng chính
+
+- **Temporal Video Grounding**: Mỗi đoạn transcript được liên kết với `video_id`, `timestamp` (thời điểm bắt đầu tính theo giây) và `duration`. Giao diện hỗ trợ chuyển trực tiếp đến đúng thời điểm phát của video khi nhấp vào nguồn trích dẫn.
+- **Kiểm duyệt học thuật và bảo mật**: Nhận diện các truy vấn ngoài phạm vi môn học và ngăn chặn tấn công injection trước khi chuyển dữ liệu vào quy trình sinh câu trả lời.
+- **Microservice Reranker chuyên biệt**: Đóng gói mô hình Cross-Encoder riêng biệt, tối ưu hóa tính toán trên GPU thông qua PyTorch/CUDA.
+- **Hybrid Search tối ưu hóa tiếng Việt**: Kết hợp tìm kiếm vector ngữ nghĩa với tìm kiếm từ khóa chính xác BM25 cho thuật ngữ chuyên ngành.
+- **Quản lý xác thực và phân quyền**: Tích hợp JWT Authentication, phân quyền người dùng và kiểm soát tần suất truy cập với **SlowAPI Rate Limiter**.
+- **Quan sát hệ thống (Observability)**: Tích hợp **Langfuse** để theo dõi vết thực thi (traces), phân rã độ trễ từng bước và giám sát mức độ sử dụng token.
+- **Hot-reload với Docker Compose Watch**: Đồng bộ thay đổi mã nguồn lập tức vào container đang chạy mà không cần build lại toàn bộ image.
+
+---
+
+## Cấu trúc mã nguồn
+
+```bash
+temporal-rag-chatbot/
+├── .env.example               # Mẫu cấu hình biến môi trường
+├── compose.yaml               # Docker Compose cấu hình 6 services (Backend, UI, DB, Chroma, Reranker, Adminer)
+├── Dockerfile                 # Dockerfile cho Backend FastAPI
+├── Dockerfile.gradio          # Dockerfile cho Gradio Web Client
+├── pyproject.toml             # Quản lý dependencies với uv
+├── main.py                    # Entry point khởi tạo FastAPI app & Lifespan Seeding
+├── gradio_app.py              # Entry point chạy Gradio Interface
+│
+├── data/                      # Dữ liệu phục vụ bài giảng và RAG
+│   ├── videos/                # Thư mục chứa các tệp video MP4 bài giảng
+│   ├── videos.csv             # Danh mục video và URL mapping
+│   ├── chunks.csv             # Dữ liệu chunk văn bản & timestamp
+│   ├── video_chunks.csv       # Metadata chi tiết các phân đoạn video
+│   └── vector_data_export.pkl # Dữ liệu vector trích xuất sẵn
+│
+├── inference/                 # Microservice Reranker chuyên biệt
+│   ├── Dockerfile             # Container inference tối ưu PyTorch + CUDA
+│   ├── main.py                # FastAPI endpoint /rerank sử dụng BAAI/bge-reranker-v2-m3
+│   └── download_model.py      # Script tải trước trọng số model từ HuggingFace
+│
+├── src/                       # Mã nguồn ứng dụng chính
+│   ├── api/                   # API Routers
+│   │   ├── agentic_ask.py     # Endpoint chính tiếp nhận câu hỏi RAG (/agentic_ask)
+│   │   ├── auth.py            # Endpoints Đăng ký / Đăng nhập / Lấy Token (/auth)
+│   │   ├── chunks.py          # CRUD quản lý Chunks (/chunks)
+│   │   ├── users.py           # Quản lý tài khoản người dùng (/users)
+│   │   └── videos.py          # Quản lý danh mục Video (/videos)
+│   ├── core/                  # Cấu hình lõi hệ thống
+│   │   ├── config.py          # Pydantic BaseSettings đọc .env
+│   │   ├── logging.py         # Cấu hình logging chuẩn hóa
+│   │   ├── rate_limit.py      # Cấu hình giới hạn tốc độ truy cập (SlowAPI)
+│   │   └── security.py        # Xử lý Hashing mật khẩu & JWT Tokens
+│   ├── database/              # Quản lý Database & ORM
+│   │   ├── session.py         # SQLAlchemy Async Engine & SessionMaker
+│   │   └── seed.py            # Tự động nạp dữ liệu mẫu khi khởi động
+│   ├── models/                # SQLAlchemy Models (PostgreSQL)
+│   │   ├── base.py            # Declarative Base Model
+│   │   ├── user.py            # Model bảng Users
+│   │   ├── video.py           # Model bảng Videos
+│   │   └── chunk.py           # Model bảng Chunks (timestamp, duration, video_id)
+│   ├── schemas/               # Pydantic Data Validation Schemas
+│   ├── services/              # Nghiệp vụ lõi và LangGraph RAG
+│   │   ├── rag/
+│   │   │   ├── agent_graph.py # Lớp AgenticRagService điều phối LangGraph
+│   │   │   ├── bm25.py        # Trình khởi tạo và tìm kiếm BM25
+│   │   │   ├── vectordb.py    # Kết nối ChromaDB Vector Store
+│   │   │   ├── tools.py       # Retriever Tool tích hợp Hybrid Search
+│   │   │   ├── config.py      # Cấu hình tham số RAG (Top-K, Weights, Models)
+│   │   │   ├── state.py       # Cấu trúc ThreadState cho LangGraph
+│   │   │   ├── context.py     # Runtime Context cho graph execution
+│   │   │   ├── prompts.py     # Tập hợp các System Prompts chuẩn hóa
+│   │   │   └── nodes/         # Từng Node độc lập trong LangGraph
+│   │   │       ├── guardrail_node.py
+│   │   │       ├── rewrite_query_node.py
+│   │   │       ├── retrieve_node.py
+│   │   │       ├── rerank_node.py
+│   │   │       └── generate_answer_node.py
+│   └── gradio_ui/             # Module xây dựng Giao diện Gradio
+│       ├── app.py             # Khởi tạo giao diện Blocks & Event Bindings
+│       ├── components.py      # Layout các Cards, Chat, Player, Sources Table
+│       ├── handlers.py        # Logic tương tác API, xử lý Login/Query
+│       ├── styles.py          # Custom CSS Theming
+│       └── utils.py           # Helpers format dữ liệu, tạo thẻ HTML Video
+│
+└── public/                    # Giao diện web tĩnh
+    └── index.html
+```
+
+---
+
+## Yêu cầu hệ thống
+
+- **Hệ điều hành**: Linux (Ubuntu 20.04+), macOS hoặc Windows 10/11 (khuyến nghị WSL2).
+- **Phần mềm yêu cầu**:
+  - Docker (v24.0 trở lên) và Docker Compose (v2.20 trở lên).
+  - Python 3.12+ (trường hợp chạy trực tiếp ngoài Docker).
+  - uv (Trình quản lý package Python).
+- **Phần cứng đề xuất**:
+  - **RAM**: Tối thiểu 8GB (khuyến nghị 16GB).
+  - **GPU**: NVIDIA GPU tối thiểu 4GB VRAM để chạy container Reranker với CUDA. Hệ thống tự động chuyển về CPU nếu không phát hiện GPU.
+
+---
 
 ## Cài đặt và Khởi chạy
 
-Dự án được khuyến nghị chạy bằng Docker Compose để đồng bộ môi trường.
-
-**Khởi chạy với Docker**:
-```sh
-docker compose up -d
-docker compose watch  # Hỗ trợ Hot-reload
+### Bước 1: Clone Repository từ GitHub
+```bash
+git clone https://github.com/NBasLongz/A-Temporal-RAG-Framework-for-UIT-Course-Video-Retrieval.git
+cd A-Temporal-RAG-Framework-for-UIT-Course-Video-Retrieval
 ```
-- **Dashboard cho dữ liệu** sẽ hoạt động tại: `http://localhost:8000`
 
-- **Gradio UI** sẽ hoạt động tại `http://localhost:7860`
+### Bước 2: Thiết lập biến môi trường
+Tạo tệp `.env` từ tệp mẫu `.env.example`:
+```bash
+cp .env.example .env
+```
+Cấu hình API Key cần thiết (ví dụ `GOOGLE_API_KEY` từ Google AI Studio):
+```ini
+GOOGLE_API_KEY=AIzaSy...
+```
 
-## Lưu ý
-- Các thiết lập biến môi trường như API Keys của LLM/VectorDB, thông tin DataBase cần được cấu hình theo template tại thư mục gốc.
-- Reranker Service chạy container sử dụng GPU (yêu cầu CUDA).
+### Bước 3 (Tùy chọn): Tải trước Model Weights cho Reranker
+Để giảm thời gian khởi động container Reranker trong lần đầu tiên:
+```bash
+python inference/download_model.py
+```
+
+### Bước 4: Khởi chạy toàn bộ hệ thống bằng Docker Compose
+
+```bash
+# Khởi chạy tất cả các services ở chế độ nền
+docker compose up -d
+
+# Xem log theo dõi tiến trình khởi động
+docker compose logs -f
+```
+
+Để bật chế độ hot-reload trong quá trình phát triển:
+```bash
+docker compose watch
+```
+
+### Bước 5: Danh sách cổng dịch vụ
+
+| Dịch vụ | Địa chỉ truy cập | Chức năng |
+| :--- | :--- | :--- |
+| Gradio Web Interface | http://localhost:7860 | Giao diện Chatbot, Video Player và Bảng trích dẫn nguồn |
+| FastAPI Backend Swagger Docs | http://localhost:8000/docs | Tài liệu kiểm thử API tương tác (Swagger UI) |
+| Backend Health Check | http://localhost:8000/health | Kiểm tra tình trạng kết nối DB, ChromaDB, Reranker |
+| Reranker Service Docs | http://localhost:8001/docs | OpenAPI Docs của Cross-Encoder Microservice |
+| Adminer (Database Manager) | http://localhost:8081 | Giao diện Web quản trị dữ liệu PostgreSQL |
+| Frontend Web (Nginx) | http://localhost:3000 | Web tĩnh |
+
+---
+
+## Cấu hình biến môi trường (.env)
+
+| Biến môi trường | Giá trị mặc định | Mô tả |
+| :--- | :--- | :--- |
+| `GOOGLE_API_KEY` | *(Bắt buộc)* | API Key để gọi Gemini LLM và Gemini Embeddings |
+| `EMBEDDING_MODEL` | `gemini-embedding-2-preview` | Mô hình sinh vector đại diện ngữ nghĩa |
+| `POSTGRES_USER` | `myuser` | Tên người dùng cơ sở dữ liệu PostgreSQL |
+| `POSTGRES_PASSWORD` | `mypassword` | Mật khẩu cơ sở dữ liệu PostgreSQL |
+| `POSTGRES_HOST` | `localhost` (hoặc `db` trong docker) | Địa chỉ kết nối PostgreSQL |
+| `POSTGRES_PORT` | `5432` | Cổng kết nối PostgreSQL |
+| `POSTGRES_DB` | `fastapidb` | Tên cơ sở dữ liệu |
+| `CHROMA_HOST` | `chromadb` | Tên host dịch vụ ChromaDB |
+| `CHROMA_PORT` | `8000` | Cổng nội bộ của ChromaDB |
+| `RERANKER_URL` | `http://reranker:8001` | URL kết nối dịch vụ Cross-Encoder Reranker |
+| `retriever_top_k` | `20` | Số tài liệu thu hồi ở bước Hybrid Search |
+| `reranker_top_k` | `10` | Số tài liệu giữ lại sau khi Rerank |
+| `LANGFUSE_PUBLIC_KEY` | `pk-lf-...` | Public Key giám sát trên nền tảng Langfuse |
+| `LANGFUSE_SECRET_KEY` | `sk-lf-...` | Secret Key giám sát trên nền tảng Langfuse |
+| `LANGFUSE_BASE_URL` | `https://cloud.langfuse.com` | Máy chủ Langfuse Cloud hoặc Self-hosted |
+
+---
+
+## Tài liệu API Endpoints
+
+### 1. Phân hệ Xác thực (`/auth`)
+- `POST /auth/register`: Đăng ký tài khoản người dùng mới (email, password).
+- `POST /auth/token` hoặc `POST /auth/login`: Xác thực và nhận JWT `access_token`.
+- `GET /auth/me`: Lấy thông tin tài khoản hiện tại từ token.
+
+### 2. Phân hệ RAG Agent (`/agentic_ask`)
+- `POST /agentic_ask/?question=...`: Gửi câu hỏi vào đồ thị LangGraph Agent.
+  - **Giới hạn gọi (Rate Limit)**: 10 yêu cầu / phút.
+  - **Mẫu cấu trúc phản hồi**:
+    ```json
+    {
+      "query": "Hàm mất mát Cross-Entropy là gì?",
+      "rewritten_query": "Hàm mất mát Cross-Entropy (Loss Function) đo lường sự khác biệt giữa...",
+      "answer": "Hàm mất mát Cross-Entropy được sử dụng chủ yếu trong bài toán phân loại...",
+      "sources": [
+        {
+          "content": "Đoạn transcript bài giảng về Cross Entropy...",
+          "video_name": "CS431_Lecture_03.mp4",
+          "timestamp": 1420,
+          "duration": 45,
+          "url": "/media/videos/CS431_Lecture_03.mp4#t=1420"
+        }
+      ],
+      "n_iterations": 1,
+      "n_llm_calls": 3,
+      "execution_time": 2.45,
+      "guardrail_result": "Câu hỏi hợp lệ và thuộc nội dung khóa học CS431."
+    }
+    ```
+
+### 3. Phân hệ Quản lý Video & Chunks (`/videos`, `/chunks`)
+- `GET /videos`: Lấy danh sách video bài giảng.
+- `GET /chunks`: Lấy danh sách các chunk văn bản đã phân đoạn kèm timestamp.
+
+### 4. Phân hệ Giám sát (`/health`)
+- `GET /health`: Kiểm tra tình trạng hoạt động của PostgreSQL, ChromaDB, BM25 và Reranker.
+
+---
+
+## Giao diện người dùng (Gradio UI)
+
+Giao diện Gradio được cấu hình tập trung vào sự tiện dụng trong tra cứu bài giảng:
+
+1. **Đăng nhập và phân quyền**: Hỗ trợ đăng nhập tài khoản để xác thực quyền truy vấn.
+2. **Khung tìm kiếm và trả lời**: Hỗ trợ hiển thị câu trả lời với định dạng Markdown và công thức Toán học $\LaTeX$ ($...$ và $$...$$).
+3. **Bảng trích dẫn nguồn (Sources Table)**: Thể hiện tên video, mốc thời gian và đường dẫn phát.
+4. **Trình phát video tương tác**: Khi người dùng chọn một hàng trong bảng nguồn, trình phát video sẽ tải bài giảng và **tua đến đúng giây bắt đầu của phân đoạn tương ứng**.
+
+---
+
+## Giám sát và Đánh giá (Observability)
+
+Hệ thống tích hợp với **Langfuse** để giám sát hiệu năng:
+
+- **Tracing & Latency Breakdown**: Đo lường chi tiết thời gian thực thi của từng node trong đồ thị: Guardrail, HyDE Rewrite, Vector/BM25 Search, Reranking và LLM Generation.
+- **Cost & Token Tracking**: Thống kê số lượng Prompt Tokens, Completion Tokens tiêu thụ trên từng yêu cầu.
+- **Dataset & Evaluation**: Hỗ trợ trích xuất vết thực thi phục vụ đánh giá chất lượng phản hồi theo tiêu chuẩn RAGAS.
+
+---
+
+## Thông tin môn học
+
+- **Môn học**: Các kỹ thuật học sâu và ứng dụng (CS431)
+- **Đơn vị đào tạo**: Khoa Khoa học Máy tính - Trường Đại học Công nghệ Thông tin, ĐHQG-HCM (UIT).
+- **Mục đích**: Mã nguồn được phát triển phục vụ công tác học tập và nghiên cứu.
