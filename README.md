@@ -36,8 +36,8 @@
 ## Mục lục
 - [Giới thiệu tổng quan](#giới-thiệu-tổng-quan)
 - [Quy trình xử lý toàn diện (End-to-End Pipeline)](#quy-trình-xử-lý-toàn-diện-end-to-end-pipeline)
-- [Kiến trúc hệ thống](#kiến-trúc-hệ-thống-system-architecture)
-- [Luồng xử lý Agentic RAG (LangGraph Workflow)](#luồng-xử-lý-agentic-rag-langgraph-workflow)
+- [Kiến trúc hệ thống và Dịch vụ (System Architecture)](#kiến-trúc-hệ-thống-và-dịch-vụ-system-architecture)
+- [Hiện thực hóa Agentic RAG với LangGraph (LangGraph Implementation)](#hiện-thực-hóa-agentic-rag-với-langgraph-langgraph-implementation)
 - [Các tính năng chính](#các-tính-năng-chính)
 - [Cấu trúc mã nguồn](#cấu-trúc-mã-nguồn)
 - [Yêu cầu hệ thống](#yêu-cầu-hệ-thống)
@@ -96,7 +96,7 @@ Quy trình được chia thành 2 giai đoạn độc lập nhưng liên kết c
 
 ---
 
-## Kiến trúc hệ thống (System Architecture)
+## Kiến trúc hệ thống và Dịch vụ (System Architecture)
 
 Hệ thống được phân chia theo kiến trúc Microservices và đóng gói hoàn chỉnh bằng **Docker Compose**:
 
@@ -147,37 +147,46 @@ flowchart TD
 
 ---
 
-## Luồng xử lý Agentic RAG (LangGraph Workflow)
+## Hiện thực hóa Agentic RAG với LangGraph (LangGraph Implementation)
+
+Pipeline xử lý truy vấn trực tuyến được hiện thực hóa dưới dạng đồ thị có trạng thái (**StateGraph**) trong module [`src/services/rag/agent_graph.py`](file:///f:/University%20of%20information%20technology%27s%20Courses/CS431_DL/Project_RAG/temporal-rag-chatbot/src/services/rag/agent_graph.py), đảm bảo tính module hóa và dễ mở rộng:
 
 ```mermaid
 graph LR
-    Start([User Query]) --> Guardrail{Query Guardrail}
+    Start([Bắt đầu]) --> Guardrail{query_guardrail}
     
-    Guardrail -- Off-topic / Malicious --> OutOfScope[Out of Scope Response] --> EndNode([Return Message])
+    Guardrail -- out_of_scope --> OutOfScope[out_of_scope_response] --> EndNode([Kết thúc])
     
-    Guardrail -- Academic Relevant --> Rewrite[HyDE Query Rewrite\nSinh tài liệu giả định song ngữ]
+    Guardrail -- continue --> Rewrite[query_rewrite]
     
-    Rewrite --> Retrieve[Get Relevant Documents]
+    Rewrite --> Retrieve[get_relevant_documents]
     
-    Retrieve --> SearchTool[Hybrid Search Tool\nBM25 + Chroma Vector DB]
+    Retrieve --> ToolNode[search_tool\nHybrid BM25 + ChromaDB]
     
-    SearchTool --> Rerank[GPU Cross-Encoder Rerank\nbge-reranker-v2-m3]
+    ToolNode --> Rerank[rerank\nCross-Encoder GPU]
     
-    Rerank --> GenAnswer[Context-Grounded Answer Generation\nGemini 2.5 Flash + LaTeX]
+    Rerank --> GenAnswer[generate_answer\nGemini 2.5 Flash]
     
-    GenAnswer --> FinalResponse[Pack Answer + Video Timestamps] --> EndNode
+    GenAnswer --> ResponseNode[response\nĐóng gói kết quả & Sources] --> EndNode
 ```
 
-### Chi tiết các Node trong Đồ thị LangGraph:
-1. **`query_guardrail`**: Kiểm tra an toàn truy vấn, phát hiện tấn công prompt injection/jailbreak và phân loại tính liên quan học thuật của câu hỏi.
-2. **`out_of_scope_response`**: Phản hồi từ chối lịch sự khi câu hỏi không thuộc phạm vi bài giảng hoặc vi phạm chính sách an toàn.
-3. **`query_rewrite` (HyDE)**: Sinh một đoạn văn bản giả định (Hypothetical Document) bằng tiếng Việt kèm thuật ngữ tiếng Anh mở rộng nhằm tối ưu khoảng cách biểu diễn vector.
-4. **`search_tool` (Hybrid Search)**:
-   - *Dense Retrieval*: ChromaDB sử dụng vector từ Google Gemini Embedding API.
-   - *Sparse Retrieval*: Thuật toán BM25 trích xuất chính xác theo từ khóa/công thức.
-   - *Fusion*: Kết hợp điểm số theo trọng số cấu hình (`semantic_weight` và `bm25_weight`).
-5. **`rerank`**: Gửi danh sách ứng viên Top-K sang Microservice GPU chạy mô hình **BAAI/bge-reranker-v2-m3** để tái chấm điểm tương đồng ngữ nghĩa.
-6. **`generate_answer`**: Tổng hợp ngữ cảnh từ slide và transcript bài giảng để sinh câu trả lời sư phạm chi tiết, hỗ trợ định dạng công thức toán $\LaTeX$ và trích dẫn minh bạch.
+### 1. Quản lý trạng thái đồ thị (`ThreadState`)
+Trạng thái luồng xử lý được duy trì nhất quán qua các node với schema `ThreadState`:
+- `messages`: Danh sách chuỗi hội thoại (`HumanMessage`, `AIMessage`, `ToolMessage`).
+- `original_query` & `rewritten_query`: Lưu vết câu hỏi gốc và tài liệu giả định được sinh bởi node `query_rewrite`.
+- `guardrail_result`: Kết quả đánh giá mức độ an toàn và độ liên quan học thuật từ node `query_guardrail`.
+- `sources`: Danh sách chunks bài giảng (kèm `video_id`, `timestamp`, `duration`) sau khi qua bước lọc và reranking.
+- `n_iterations` & `n_llm_calls`: Bộ đếm vòng lặp và số lần gọi LLM để kiểm soát giới hạn tài nguyên.
+
+### 2. Ngữ cảnh thực thi động (`Runtime Context`)
+Các tham số suy luận được truyền độc lập qua lớp `Context`, cho phép thay đổi cấu hình linh hoạt theo từng request mà không cần tái khởi tạo đồ thị:
+- `retriever_top_k` (mặc định 20): Số lượng ứng viên thu thập ban đầu từ Hybrid Search.
+- `reranker_top_k` (mặc định 10): Số lượng ứng viên tối ưu nhất giữ lại sau bước Cross-Encoder.
+- `temperature`, `llm_model`, `reranker_url`: Các cấu hình kết nối mô hình và dịch vụ suy luận.
+
+### 3. Cơ chế rẽ nhánh có điều kiện (Conditional Routing)
+- **`continue_after_guardrail`**: Định tuyến dựa trên kết quả kiểm duyệt an toàn. Nếu truy vấn vi phạm hoặc nằm ngoài phạm vi học thuật, luồng xử lý rẽ sang `out_of_scope_response` và kết thúc ngay, tiết kiệm chi phí gọi mô hình tìm kiếm và sinh văn bản.
+- **`tools_condition`**: Kích hoạt `ToolNode` thực thi công cụ tìm kiếm kết hợp song song (Sparse BM25 + Dense ChromaDB) trước khi chuyển tiếp sang tầng tái xếp hạng Cross-Encoder GPU.
 
 ---
 
